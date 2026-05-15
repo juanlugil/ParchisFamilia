@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parchís Familiar</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero-panel">
+      <h1>Parchís Familiar</h1>
+      <p>Personaliza las fichas de cada jugador antes de empezar.</p>
+      <div class="inputs-grid">
+        <label class="file-label" for="imageRed">Jugador Rojo</label>
+        <input id="imageRed" type="file" accept="image/*" />
+        <label class="file-label" for="imageGreen">Jugador Verde</label>
+        <input id="imageGreen" type="file" accept="image/*" />
+        <label class="file-label" for="imageYellow">Jugador Amarillo</label>
+        <input id="imageYellow" type="file" accept="image/*" />
+        <label class="file-label" for="imageBlue">Jugador Azul</label>
+        <input id="imageBlue" type="file" accept="image/*" />
+      </div>
+      <button id="startButton" type="button">Iniciar partida</button>
+      <div id="statusPanel" class="status-panel hidden"></div>
+      <div class="dice-controls">
+        <button id="rollDiceButton" type="button" class="hidden">Lanzar dado</button>
+        <div id="diceFace" class="dice-face hidden" aria-label="Cara del dado"></div>
+      </div>
+      <div id="diceResult" class="dice-result hidden"></div>
+      <div id="actionPanel" class="status-panel hidden"></div>
+    </section>
+
+    <section class="board-panel hidden" id="boardPanel">
+      <div id="gameStatePanel" class="status-panel"></div>
+      <div class="board-stage" id="boardStage" aria-label="Tablero de parchís"></div>
+    </section>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
