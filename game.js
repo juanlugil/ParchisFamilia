@@ -998,7 +998,7 @@ function rollDice() {
 
   const start = Date.now();
   diceTimer = setInterval(() => {
-    const face = 5//Math.floor(Math.random() * 6) + 1;
+    const face = Math.floor(Math.random() * 6) + 1;
     renderDiceFace(face);
     diceResult.textContent = `Resultado: ${face}`;
     diceResult.classList.remove('hidden');
