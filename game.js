@@ -63,6 +63,11 @@ const players = [
 
 let currentPlayerIndex = 0;
 let diceTimer = null;
+let countdownTimer = null;
+let moveDelayTimer = null;
+let resultDelayTimer = null;
+let pendingMoveOptions = [];
+let pendingMoveCallback = null;
 let currentRoll = null;
 const rollDuration = 3000;
 
@@ -72,9 +77,16 @@ const diceFace = document.getElementById('diceFace');
 const diceResult = document.getElementById('diceResult');
 const boardPanel = document.getElementById('boardPanel');
 const boardStage = document.getElementById('boardStage');
-const actionPanel = document.getElementById('actionPanel');
-const gameStatePanel = document.getElementById('gameStatePanel');
 const startButton = document.getElementById('startButton');
+const welcomePanel = document.getElementById('welcomePanel');
+const selectionPanel = document.getElementById('selectionPanel');
+const continueButton = document.getElementById('continueButton');
+const closeButton = document.getElementById('closeButton');
+const backButton = document.getElementById('backButton');
+const selectionStatus = document.getElementById('selectionStatus');
+const diceOverlay = document.getElementById('diceOverlay');
+const diceOptionGroup = document.getElementById('diceOptionGroup');
+let currentScreen = 'welcome';
 
 function readImageFile(file) {
   return new Promise((resolve, reject) => {
@@ -83,6 +95,98 @@ function readImageFile(file) {
     reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
     reader.readAsDataURL(file);
   });
+}
+
+function clearDiceTimer() {
+  if (diceTimer) {
+    clearInterval(diceTimer);
+    diceTimer = null;
+  }
+}
+
+function showDiceOverlay() {
+  diceOverlay.classList.remove('hidden');
+  diceOverlay.style.display = 'grid';
+  diceOverlay.style.zIndex = '10000';
+}
+
+function hideDiceOverlay() {
+  clearDiceTimer();
+  diceOverlay.classList.add('hidden');
+  diceOverlay.style.display = 'none';
+  diceOptionGroup.innerHTML = '';
+  diceResult.classList.add('hidden');
+  diceFace.classList.add('hidden');
+  clearCountdown();
+  clearPendingMoveSelection();
+}
+
+function setDiceOverlayVisibility(visible) {
+  if (visible) {
+    showDiceOverlay();
+    return;
+  }
+  diceOverlay.classList.add('hidden');
+  diceOverlay.style.display = 'none';
+}
+
+function renderDiceDialog(message, buttons = [], showRoll = false) {
+  diceResult.textContent = message || '';
+  diceResult.classList.toggle('hidden', !message);
+  diceOptionGroup.innerHTML = '';
+
+  buttons.forEach((buttonData) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'action-button';
+    button.textContent = buttonData.label;
+    button.addEventListener('click', buttonData.onClick);
+    diceOptionGroup.appendChild(button);
+  });
+
+  rollDiceButton.classList.toggle('hidden', !showRoll);
+  diceOverlay.classList.toggle('selection-mode', pendingMoveOptions.length > 0);
+  if (pendingMoveOptions.length === 0) {
+    showDiceOverlay();
+  } else {
+    setDiceOverlayVisibility(false);
+  }
+}
+
+function setPendingMoveOptions(options, callback, message) {
+  pendingMoveOptions = options;
+  pendingMoveCallback = callback;
+  rollDiceButton.disabled = true;
+  renderDiceDialog(message, [], false);
+  statusPanel.textContent = message || '';
+  renderAll();
+}
+
+function clearPendingMoveSelection() {
+  const hadPendingOptions = pendingMoveOptions.length > 0;
+  pendingMoveOptions = [];
+  pendingMoveCallback = null;
+  if (hadPendingOptions && currentScreen === 'game') {
+    renderAll();
+  }
+}
+
+function getPendingOptionForPiece(piece) {
+  return pendingMoveOptions.find((option) => option.piece === piece) || null;
+}
+
+function selectPiece(piece) {
+  if (currentScreen !== 'game') {
+    return;
+  }
+  const option = getPendingOptionForPiece(piece);
+  if (!option) {
+    return;
+  }
+  const callback = pendingMoveCallback;
+  clearPendingMoveSelection();
+  hideDiceOverlay();
+  callback?.(option);
 }
 
 function renderDiceFace(face) {
@@ -308,6 +412,14 @@ function renderBoardMarkers() {
     boardStage.appendChild(marker);
   });
 
+  Object.values(lanePositions).flat().forEach((coords) => {
+    const marker = document.createElement('div');
+    marker.className = 'board-marker lane';
+    marker.style.left = coords.left;
+    marker.style.top = coords.top;
+    boardStage.appendChild(marker);
+  });
+
   finishPositions.forEach((coords, index) => {
     const marker = document.createElement('div');
     marker.className = `board-marker finish finish-${index + 1}`;
@@ -399,6 +511,15 @@ function renderBoardPieces() {
       token.style.left = coords.left;
       token.style.top = coords.top;
       token.style.backgroundColor = player.image ? 'transparent' : player.color;
+      token.dataset.player = player.color;
+      token.dataset.pieceId = piece.id;
+
+      const selectableOption = getPendingOptionForPiece(piece);
+      if (selectableOption) {
+        token.classList.add('clickable');
+        token.title = 'Haz clic para mover esta ficha';
+        token.addEventListener('click', () => selectPiece(piece));
+      }
 
       if (player.image) {
         const img = document.createElement('img');
@@ -449,63 +570,105 @@ function getAllImagesLoaded() {
   return players.some((player) => player.image);
 }
 
+function showScreen(screen) {
+  currentScreen = screen;
+  welcomePanel.classList.toggle('hidden', screen !== 'welcome');
+  selectionPanel.classList.toggle('hidden', screen !== 'selection');
+  boardPanel.classList.toggle('hidden', screen !== 'game');
+  resetGameState();
+  selectionStatus.classList.add('hidden');
+  rollDiceButton.disabled = screen !== 'game';
+  if (screen === 'game') {
+    statusPanel.classList.remove('hidden');
+    renderAll();
+  } else {
+    statusPanel.classList.add('hidden');
+  }
+}
+
+function clearCountdown() {
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+}
+
+function clearMoveDelayTimer() {
+  if (moveDelayTimer) {
+    clearTimeout(moveDelayTimer);
+    moveDelayTimer = null;
+  }
+}
+
+function clearResultDelayTimer() {
+  if (resultDelayTimer) {
+    clearTimeout(resultDelayTimer);
+    resultDelayTimer = null;
+  }
+}
+
+function resetGameState() {
+  clearDiceTimer();
+  clearCountdown();
+  clearMoveDelayTimer();
+  clearResultDelayTimer();
+  clearPendingMoveSelection();
+  currentRoll = null;
+  hideDiceOverlay();
+}
+
+function startCountdown(seconds) {
+  clearCountdown();
+  let remaining = seconds;
+  rollDiceButton.disabled = true;
+  renderDiceFace(null);
+  renderDiceDialog(`Preparando primera tirada... ${remaining}`);
+  showDiceOverlay();
+
+  countdownTimer = setInterval(() => {
+    remaining -= 1;
+    if (remaining > 0) {
+      renderDiceDialog(`Comienza en... ${remaining}`);
+      return;
+    }
+    clearCountdown();
+    renderDiceDialog(`Ya puedes tirar el dado`, [], true);
+    rollDiceButton.disabled = false;
+  }, 1000);
+}
+
+function closeApp() {
+  window.close();
+}
+
+function openSelectionScreen() {
+  showScreen('selection');
+}
+
+function returnToWelcomeScreen() {
+  showScreen('welcome');
+}
+
 function startGame() {
+  if (currentScreen !== 'selection') {
+    return;
+  }
 
   buildPlayers();
   currentPlayerIndex = Math.floor(Math.random() * players.length);
   const current = players[currentPlayerIndex];
 
-  boardPanel.classList.remove('hidden');
-  statusPanel.classList.remove('hidden');
-  statusPanel.textContent = `Empieza ${current.name}. ¡Presiona "Lanzar dado" para jugar!`;
-  rollDiceButton.classList.remove('hidden');
-  diceResult.classList.add('hidden');
-  actionPanel.classList.add('hidden');
+  resetGameState();
+  showScreen('game');
+  statusPanel.textContent = `Empieza ${current.name}. Preparando primera tirada...`;
+  startCountdown(3);
   renderAll();
-  rollDiceButton.disabled = false;
-}
-
-function renderGameState() {
-  gameStatePanel.innerHTML = '';
-
-  players.forEach((player) => {
-    const container = document.createElement('div');
-    container.className = 'player-status';
-
-    const title = document.createElement('h3');
-    title.className = `player-status-title ${player.color}`;
-    title.textContent = `${player.name}`;
-    container.appendChild(title);
-
-    const list = document.createElement('ul');
-    list.className = 'player-status-list';
-
-    player.pieces.forEach((piece) => {
-      const item = document.createElement('li');
-      let label = `Ficha ${piece.id}: `;
-      if (piece.status === 'home') {
-        label += 'Casa';
-      } else if (piece.status === 'track') {
-        label += `Casilla ${piece.position + 1}`;
-      } else if (piece.status === 'lane') {
-        label += `Carril final ${piece.lanePosition}`;
-      } else {
-        label += 'Finalizada';
-      }
-      item.textContent = label;
-      list.appendChild(item);
-    });
-
-    container.appendChild(list);
-    gameStatePanel.appendChild(container);
-  });
 }
 
 function renderAll() {
   renderBoardMarkers();
   renderHomeAreas();
   renderBoardPieces();
-  renderGameState();
 }
 
 function getTrackOccupants() {
@@ -551,7 +714,10 @@ function getTrackTarget(position, dice, player) {
 
 function getLaneTarget(piece, dice) {
   const targetLane = piece.lanePosition + dice;
-  if (targetLane > homeLaneLength) {
+  if (targetLane === homeLaneLength + 1) {
+    return { status: 'finished', lanePosition: targetLane };
+  }
+  if (targetLane > homeLaneLength + 1) {
     return null;
   }
   return {
@@ -562,16 +728,21 @@ function getLaneTarget(piece, dice) {
 
 function isOwnBlockingTarget(player, target, piece) {
   if (target.status === 'track') {
+    const occupants = getTrackOccupants().get(target.position) || [];
     if (isSafeSquare(target.position)) {
-      return false;
+      return occupants.length > 0;
     }
-    return hasOwnPieceOnTrack(target.position, player);
+    return occupants.some((entry) => entry.player === player);
   }
 
-  if (target.status === 'lane' || target.status === 'finished') {
+  if (target.status === 'lane') {
     return player.pieces.some((otherPiece) =>
       otherPiece !== piece && otherPiece.status === target.status && otherPiece.lanePosition === target.lanePosition
     );
+  }
+
+  if (target.status === 'finished') {
+    return false;
   }
 
   return false;
@@ -589,14 +760,13 @@ function getAvailableMoves(player, dice) {
         moves.push({ type: 'exit', piece, to: target, capture });
       }
     });
-    return moves;
   }
 
   player.pieces.forEach((piece) => {
     if (piece.status === 'track') {
       const target = getTrackTarget(piece.position, dice, player);
       if (target && !isOwnBlockingTarget(player, target, piece)) {
-        const capture = !isSafeSquare(target.position) && Boolean(hasOpponentOnTrack(target.position, player));
+        const capture = target.status === 'track' && !isSafeSquare(target.position) && Boolean(hasOpponentOnTrack(target.position, player));
         moves.push({ type: 'move', piece, to: target, capture });
       }
     }
@@ -614,6 +784,16 @@ function getAvailableMoves(player, dice) {
 
 function getReturnHomeOptions(player) {
   return player.pieces.filter((piece) => piece.status === 'track' || piece.status === 'lane');
+}
+
+function getGameWinner() {
+  return players.find((player) => player.pieces.every((piece) => piece.status === 'finished')) || null;
+}
+
+function endGame(winner) {
+  rollDiceButton.disabled = true;
+  hideDiceOverlay();
+  statusPanel.textContent = `¡Victoria para ${winner.name}! La partida ha terminado.`;
 }
 
 function getBonusMoves(player, steps) {
@@ -654,27 +834,12 @@ function formatActionLabel(option) {
   return `${pieceLabel} a FINAL`;
 }
 
-function renderActionPanel(options, message, callback) {
-  actionPanel.classList.remove('hidden');
-  actionPanel.innerHTML = `<p>${message}</p><div class="action-button-group"></div>`;
-  const group = actionPanel.querySelector('.action-button-group');
-
-  options.forEach((option) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'action-button';
-    button.textContent = formatActionLabel(option);
-    button.addEventListener('click', () => {
-      callback(option);
-      actionPanel.classList.add('hidden');
-    });
-    group.appendChild(button);
-  });
-}
-
-function clearActionPanel() {
-  actionPanel.classList.add('hidden');
-  actionPanel.innerHTML = '';
+function renderDiceOptions(options, message, callback) {
+  const buttons = options.map((option) => ({
+    label: formatActionLabel(option),
+    onClick: () => callback(option),
+  }));
+  renderDiceDialog(message, buttons, false);
 }
 
 function captureAtTarget(target, player) {
@@ -715,16 +880,22 @@ function applyMove(option) {
 }
 
 function finishTurn() {
+  const winner = getGameWinner();
+  if (winner) {
+    endGame(winner);
+    return;
+  }
+
   const current = players[currentPlayerIndex];
   current.consecutiveSixes = 0;
   current.pendingCaptureBonus = false;
   current.pendingFinishBonus = false;
   currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
   const next = players[currentPlayerIndex];
-  statusPanel.textContent = `Turno de ${next.name}. Pulsa "Lanzar dado" para tirar.`;
-  rollDiceButton.disabled = false;
   currentRoll = null;
-  clearActionPanel();
+  renderDiceDialog(`Turno de ${next.name}. Pulsa "Lanzar dado" para tirar.`, [], true);
+  rollDiceButton.disabled = false;
+  statusPanel.textContent = `Turno de ${next.name}. Pulsa "Lanzar dado" para tirar.`;
   renderAll();
 }
 
@@ -734,46 +905,69 @@ function handlePostMove() {
   if (current.pendingCaptureBonus) {
     const bonusMoves = getBonusMoves(current, 20);
     if (bonusMoves.length > 0) {
-      renderActionPanel(bonusMoves, 'Has capturado una ficha. Elige otra ficha para avanzar 20 casillas:', (option) => {
+      setPendingMoveOptions(bonusMoves, (option) => {
         current.pendingCaptureBonus = false;
         applyMove(option);
         handlePostMove();
-      });
+      }, 'Has capturado una ficha. Elige otra ficha para avanzar 20 casillas:');
       return;
     }
     current.pendingCaptureBonus = false;
+    statusPanel.textContent = `${current.name} ha capturado una ficha, pero no hay otra ficha válida para avanzar 20 casillas.`;
   }
 
   if (current.pendingFinishBonus) {
     const bonusMoves = getBonusMoves(current, 10);
     if (bonusMoves.length > 0) {
-      renderActionPanel(bonusMoves, 'Has llegado a la meta. Elige otra ficha para avanzar 10 casillas:', (option) => {
+      setPendingMoveOptions(bonusMoves, (option) => {
         current.pendingFinishBonus = false;
         applyMove(option);
         handlePostMove();
-      });
+      }, 'Has llegado a la meta. Elige otra ficha para avanzar 10 casillas:');
       return;
     }
     current.pendingFinishBonus = false;
+    statusPanel.textContent = `${current.name} ha llegado a la meta, pero no hay ficha válida para avanzar 10 casillas.`;
   }
 
   if (currentRoll === 6 && current.consecutiveSixes < 3) {
     statusPanel.textContent = `${current.name} sacó un 6 y puede tirar otra vez.`;
     rollDiceButton.disabled = false;
+    renderDiceFace(currentRoll);
+    renderDiceDialog(`Turno de ${current.name}. Puedes tirar otra vez con 6.`, [], true);
     return;
   }
 
+  hideDiceOverlay();
   finishTurn();
 }
 
 function performMove(option) {
-  clearActionPanel();
+  if (currentScreen !== 'game') {
+    return;
+  }
+  clearPendingMoveSelection();
+  hideDiceOverlay();
   applyMove(option);
   renderAll();
-  handlePostMove();
+
+  const winner = getGameWinner();
+  if (winner) {
+    endGame(winner);
+    return;
+  }
+
+  clearMoveDelayTimer();
+  moveDelayTimer = setTimeout(() => {
+    moveDelayTimer = null;
+    handlePostMove();
+  }, 2000);
 }
 
 function chooseReturnHome(piece) {
+  if (currentScreen !== 'game') {
+    return;
+  }
   piece.status = 'home';
   piece.position = null;
   piece.lanePosition = 0;
@@ -786,28 +980,39 @@ function chooseReturnHome(piece) {
 }
 
 function rollDice() {
+  if (currentScreen !== 'game' || rollDiceButton.disabled) {
+    return;
+  }
+
   rollDiceButton.disabled = true;
-  clearActionPanel();
-  diceResult.classList.remove('hidden');
-  diceResult.textContent = 'Lanzando...';
   renderDiceFace(null);
+  renderDiceDialog('Lanzando...', [], false);
 
   const start = Date.now();
   diceTimer = setInterval(() => {
     const face = Math.floor(Math.random() * 6) + 1;
     renderDiceFace(face);
     diceResult.textContent = `Resultado: ${face}`;
+    diceResult.classList.remove('hidden');
     if (Date.now() - start >= rollDuration) {
       clearInterval(diceTimer);
       diceTimer = null;
       currentRoll = face;
-      diceResult.textContent = `Resultado final: ${face}`;
-      processDiceResult(face);
+      renderDiceFace(face);
+      clearResultDelayTimer();
+      resultDelayTimer = setTimeout(() => {
+        resultDelayTimer = null;
+        processDiceResult(face);
+      }, 1000);
     }
   }, 120);
 }
 
 function processDiceResult(face) {
+  if (currentScreen !== 'game') {
+    return;
+  }
+
   const current = players[currentPlayerIndex];
   if (face === 6) {
     current.consecutiveSixes += 1;
@@ -818,12 +1023,13 @@ function processDiceResult(face) {
   if (current.consecutiveSixes === 3) {
     const options = getReturnHomeOptions(current);
     if (options.length > 0) {
-      renderActionPanel(options.map((piece) => ({ type: 'return', piece, to: null })), 'Has sacado tres 6s. Elige una ficha para devolverla a casa:', (option) => {
+      setPendingMoveOptions(options.map((piece) => ({ type: 'return', piece, to: null })), (option) => {
         chooseReturnHome(option.piece);
-      });
+      }, 'Has sacado tres 6s. Elige una ficha para devolverla a casa:');
       return;
     }
     statusPanel.textContent = `${current.name} ha sacado tres 6s pero no hay fichas para devolver. Fin del turno.`;
+    hideDiceOverlay();
     finishTurn();
     return;
   }
@@ -831,28 +1037,30 @@ function processDiceResult(face) {
   const moves = getAvailableMoves(current, face);
   if (moves.length === 0) {
     if (face === 6) {
-      statusPanel.textContent = `${current.name} no tiene movimientos con 6, pero puede tirar otra vez.`;
+      renderDiceDialog(`${current.name} no tiene movimientos con 6, pero puede tirar otra vez.`, [], true);
+      statusPanel.textContent = `${current.name} sigue con 6.`;
       rollDiceButton.disabled = false;
       return;
     }
     if (face === 5 && current.pieces.some((piece) => piece.status === 'home')) {
       statusPanel.textContent = `${current.name} no puede sacar ficha de casa; la casilla inicial está bloqueada. Fin del turno.`;
+      hideDiceOverlay();
       finishTurn();
       return;
     }
     statusPanel.textContent = `${current.name} no tiene movimientos posibles. Fin del turno.`;
+    hideDiceOverlay();
     finishTurn();
     return;
   }
 
-  if (moves.length === 1) {
-    performMove(moves[0]);
-    return;
-  }
-
-  renderActionPanel(moves, `Turno de ${current.name}. Elige una ficha para mover con ${face}:`, performMove);
+  setPendingMoveOptions(moves, performMove, `Turno de ${current.name}. Elige una ficha para mover con ${face}:`);
 }
 
+continueButton.addEventListener('click', openSelectionScreen);
+closeButton.addEventListener('click', closeApp);
+backButton.addEventListener('click', returnToWelcomeScreen);
 startButton.addEventListener('click', startGame);
 rollDiceButton.addEventListener('click', rollDice);
 setupInputHandlers();
+showScreen('welcome');

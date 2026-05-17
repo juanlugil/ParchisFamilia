@@ -8,9 +8,18 @@
 </head>
 <body>
   <main class="app-shell">
-    <section class="hero-panel">
-      <h1>Parchís Familiar</h1>
-      <p>Personaliza las fichas de cada jugador antes de empezar.</p>
+    <section class="welcome-panel" id="welcomePanel">
+      <div class="welcome-content">
+        <h1>Vamos a echar una partida al PARCHÍS</h1>
+        <div class="welcome-actions">
+          <button id="continueButton" type="button" class="primary">CONTINUAR</button>
+          <button id="closeButton" type="button" class="secondary">CERRAR</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="selection-panel hidden" id="selectionPanel">
+      <h2>Selecciona las imágenes de los jugadores</h2>
       <div class="inputs-grid">
         <label class="file-label" for="imageRed">Jugador Rojo</label>
         <input id="imageRed" type="file" accept="image/*" />
@@ -21,19 +30,28 @@
         <label class="file-label" for="imageBlue">Jugador Azul</label>
         <input id="imageBlue" type="file" accept="image/*" />
       </div>
-      <button id="startButton" type="button">Iniciar partida</button>
-      <div id="statusPanel" class="status-panel hidden"></div>
-      <div class="dice-controls">
-        <button id="rollDiceButton" type="button" class="hidden">Lanzar dado</button>
-        <div id="diceFace" class="dice-face hidden" aria-label="Cara del dado"></div>
+      <div class="selection-actions">
+        <button id="backButton" type="button" class="secondary">Volver</button>
+        <button id="startButton" type="button" class="primary">Iniciar partida</button>
       </div>
-      <div id="diceResult" class="dice-result hidden"></div>
-      <div id="actionPanel" class="status-panel hidden"></div>
+      <div id="selectionStatus" class="status-panel hidden"></div>
     </section>
 
     <section class="board-panel hidden" id="boardPanel">
-      <div id="gameStatePanel" class="status-panel"></div>
-      <div class="board-stage" id="boardStage" aria-label="Tablero de parchís"></div>
+      <div class="board-screen">
+        <div id="statusPanel" class="status-panel"></div>
+        <div class="board-stage" id="boardStage" aria-label="Tablero de parchís"></div>
+      </div>
+      <div class="dice-overlay hidden" id="diceOverlay">
+        <div class="dice-dialog">
+          <div class="dice-controls">
+            <button id="rollDiceButton" type="button">Lanzar dado</button>
+            <div id="diceFace" class="dice-face hidden" aria-label="Cara del dado"></div>
+          </div>
+          <div id="diceResult" class="dice-result hidden"></div>
+          <div id="diceOptionGroup" class="action-button-group"></div>
+        </div>
+      </div>
     </section>
   </main>
 
