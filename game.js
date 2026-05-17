@@ -304,28 +304,28 @@ const trackPositions = [
 
 const homePositions = {
   red: [
-    { left: '72%', top: '18%' },
-    { left: '82%', top: '18%' },
+    { left: '72%', top: '08%' },
+    { left: '92%', top: '08%' },
     { left: '72%', top: '28%' },
-    { left: '82%', top: '28%' },
+    { left: '92%', top: '28%' },
   ],
   green: [
-    { left: '18%', top: '18%' },
-    { left: '28%', top: '18%' },
-    { left: '18%', top: '28%' },
+    { left: '08%', top: '08%' },
+    { left: '28%', top: '08%' },
+    { left: '08%', top: '28%' },
     { left: '28%', top: '28%' },
   ],
   yellow: [
-    { left: '18%', top: '72%' },
+    { left: '08%', top: '72%' },
     { left: '28%', top: '72%' },
-    { left: '18%', top: '82%' },
-    { left: '28%', top: '82%' },
+    { left: '08%', top: '92%' },
+    { left: '28%', top: '92%' },
   ],
   blue: [
     { left: '72%', top: '72%' },
-    { left: '82%', top: '72%' },
-    { left: '72%', top: '82%' },
-    { left: '82%', top: '82%' },
+    { left: '92%', top: '72%' },
+    { left: '72%', top: '92%' },
+    { left: '92%', top: '92%' },
   ],
 };
 
@@ -454,28 +454,36 @@ function renderHomeAreas() {
     if (player.color === 'yellow') {
       // inner at top-right -> container from left:0 to innerLeft, top:innerTop to bottom
       left = 0;
-      top = `${innerTop}%`;
-      width = `${innerLeft}%`;
-      height = `${100 - innerTop}%`;
+      top = `66%`;
+      width = `33%`;
+      height = `33%`;
+      //width = `${innerLeft}%`;
+      //height = `${100 - innerTop}%`;
     } else if (player.color === 'blue') {
       // inner at top-left -> container from innerLeft to right, top:innerTop to bottom
-      left = `${innerLeft}%`;
-      top = `${innerTop}%`;
-      width = `${100 - innerLeft}%`;
-      height = `${100 - innerTop}%`;
+      left = `66%`;
+      top = `66%`;
+      width = `33%`;
+      height = `33%`;
+      //width = `${100 - innerLeft}%`;
+      //height = `${100 - innerTop}%`;
     } else if (player.color === 'red') {
       // inner at bottom-left -> container from innerLeft to right, top:0 to innerTop
-      left = `${innerLeft}%`;
+      left = `66%`;
       top = `0%`;
-      width = `${100 - innerLeft}%`;
-      height = `${innerTop}%`;
+      width = `33%`;
+      height = `33%`;
+      //width = `${100 - innerLeft}%`;
+      //height = `${innerTop}%`;
     } else { // green
       // inner at top-left (green specified as top-left earlier) but expansion to top-left
       // inner at top-left -> container from left:0 top:0 to inner
       left = `0%`;
       top = `0%`;
-      width = `${innerLeft}%`;
-      height = `${innerTop}%`;
+      width = `33%`;
+      height = `33%`;
+      //width = `${innerLeft}%`;
+      //height = `${innerTop}%`;
     }
 
     const container = document.createElement('div');
