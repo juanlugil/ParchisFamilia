@@ -14,7 +14,7 @@ const players = [
     homeId: 'homeRed',
     image: null,
     startIndex: 38,
-    entranceIndex: 37,
+    entranceIndex: 33,
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -27,7 +27,7 @@ const players = [
     homeId: 'homeGreen',
     image: null,
     startIndex: 55,
-    entranceIndex: 54,
+    entranceIndex: 50,
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -40,7 +40,7 @@ const players = [
     homeId: 'homeYellow',
     image: null,
     startIndex: 4,
-    entranceIndex: 3,
+    entranceIndex: 67,
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -53,7 +53,7 @@ const players = [
     homeId: 'homeBlue',
     image: null,
     startIndex: 21,
-    entranceIndex: 20,
+    entranceIndex: 16,
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -453,35 +453,35 @@ function renderHomeAreas() {
     let left, top, width, height;
     if (player.color === 'yellow') {
       // inner at top-right -> container from left:0 to innerLeft, top:innerTop to bottom
-      left = 0;
-      top = `66%`;
-      width = `33%`;
-      height = `33%`;
+      left = `1%`;
+      top = `67%`;
+      width = `32%`;
+      height = `32%`;
       //width = `${innerLeft}%`;
       //height = `${100 - innerTop}%`;
     } else if (player.color === 'blue') {
       // inner at top-left -> container from innerLeft to right, top:innerTop to bottom
-      left = `66%`;
-      top = `66%`;
-      width = `33%`;
-      height = `33%`;
+      left = `67%`;
+      top = `67%`;
+      width = `32%`;
+      height = `32%`;
       //width = `${100 - innerLeft}%`;
       //height = `${100 - innerTop}%`;
     } else if (player.color === 'red') {
       // inner at bottom-left -> container from innerLeft to right, top:0 to innerTop
-      left = `66%`;
-      top = `0%`;
-      width = `33%`;
-      height = `33%`;
+      left = `67%`;
+      top = `1%`;
+      width = `32%`;
+      height = `32%`;
       //width = `${100 - innerLeft}%`;
       //height = `${innerTop}%`;
     } else { // green
       // inner at top-left (green specified as top-left earlier) but expansion to top-left
       // inner at top-left -> container from left:0 top:0 to inner
-      left = `0%`;
-      top = `0%`;
-      width = `33%`;
-      height = `33%`;
+      left = `1%`;
+      top = `1%`;
+      width = `32%`;
+      height = `32%`;
       //width = `${innerLeft}%`;
       //height = `${innerTop}%`;
     }
@@ -511,13 +511,70 @@ function renderHomeAreas() {
 }
 
 function renderBoardPieces() {
+  // 1. Primero, creamos un mapa para contar cuántas fichas hay en cada posición del tablero
+  const positionCounters = {};
+
+  players.forEach((player) => {
+    player.pieces.forEach((piece) => {
+      // Creamos una clave única según el estado de la ficha
+      let key = '';
+      if (piece.status === 'home') {
+        key = `home-${player.color}-${piece.id}`;
+      } else if (piece.status === 'track') {
+        key = `track-${piece.position}`;
+      } else if (piece.status === 'lane') {
+        key = `lane-${player.color}-${piece.lanePosition}`;
+      } else if (piece.status === 'finished') {
+        key = `finish-${piece.id}`;
+      }
+
+      // Inicializamos o incrementamos el contador para esta posición exacta
+      if (!positionCounters[key]) {
+        positionCounters[key] = [];
+      }
+      positionCounters[key].push({ player, piece });
+    });
+  });
+
+  // 2. Ahora dibujamos las fichas aplicando el desplazamiento si comparten casilla
   players.forEach((player) => {
     player.pieces.forEach((piece) => {
       const coords = getPieceCoordinates(piece, player);
+      
+      // Reconstruimos la clave para buscar en nuestro mapa de posiciones
+      let key = '';
+      if (piece.status === 'home') key = `home-${player.color}-${piece.id}`;
+      else if (piece.status === 'track') key = `track-${piece.position}`;
+      else if (piece.status === 'lane') key = `lane-${player.color}-${piece.lanePosition}`;
+      else if (piece.status === 'finished') key = `finish-${piece.id}`;
+
+      const occupants = positionCounters[key] || [];
+      
+      // Encontrarnos a nosotros mismos dentro de los ocupantes de esta casilla
+      const myIndex = occupants.findIndex(o => o.piece === piece);
+
+      // Calculamos los offsets por defecto (sin desplazamiento)
+      let offsetX = 0;
+      let offsetY = 0;
+
+      // Si hay 2 fichas en la misma casilla de la pista (track) o carril (lane)
+      if (occupants.length > 1 && (piece.status === 'track' || piece.status === 'lane')) {
+        // Si somos la primera ficha, la movemos un poco a la izquierda (-8px)
+        // Si somos la segunda ficha, la movemos un poco a la derecha (+8px)
+        offsetX = myIndex === 0 ? -8 : 8;
+        
+        // Opcional: puedes añadir un pequeño desplazamiento vertical si el tablero lo requiere,
+        // pero habitualmente con separarlas en horizontal (X) ya es suficiente para el parchís.
+        offsetY = myIndex === 0 ? -2 : 2; 
+      }
+
       const token = document.createElement('div');
       token.className = `piece-token ${player.color}`;
-      token.style.left = coords.left;
-      token.style.top = coords.top;
+      
+      // Convertimos las coordenadas base a float para poder sumar los píxeles del offset de forma limpia usando calc()
+      token.style.left = `calc(${coords.left} + ${offsetX}px)`;
+      token.style.top = `calc(${coords.top} + ${offsetY}px)`;
+      
       token.style.backgroundColor = player.image ? 'transparent' : player.color;
       token.dataset.player = player.color;
       token.dataset.pieceId = piece.id;
@@ -705,18 +762,44 @@ function hasOpponentOnTrack(position, player) {
 }
 
 function getTrackTarget(position, dice, player) {
-  const distanceToEntrance = position <= player.entranceIndex
-    ? player.entranceIndex - position
-    : trackLength - position + player.entranceIndex;
+  // 1. Calculamos cuántos pasos le quedan a la ficha desde su 'position' actual
+  // hasta alcanzar su casilla de entrada ('player.entranceIndex').
+  let distanceToEntrance = 0;
+  
+  if (position <= player.entranceIndex) {
+    // Caso simple: la ficha aún no ha cruzado el índice 0 del tablero
+    distanceToEntrance = player.entranceIndex - position;
+  } else {
+    // Caso de vuelta completa: la ficha ya pasó el índice de su entrada en la vuelta anterior
+    // y está completando el circuito (por ejemplo, posición 65 y entrada en 3)
+    distanceToEntrance = (trackLength - position) + player.entranceIndex;
+  }
 
+  // 2. Si el dado saca exactamente lo necesario para pisar la entrada + 1 paso más,
+  // la ficha entra en la primera casilla del carril de meta (lanePosition = 1).
   if (dice === distanceToEntrance + 1) {
     return { status: 'lane', lanePosition: 1 };
   }
 
+  // 3. Si el dado saca más pasos de los necesarios para llegar a la entrada + 1,
+  // significa que se adentra aún más en el carril de color (por ejemplo, carril 2, 3, etc.)
   if (dice > distanceToEntrance + 1) {
-    return null;
+    const stepsIntoLane = dice - (distanceToEntrance + 1);
+    
+    // Validamos que no se pase del tamaño del carril (homeLaneLength es 8)
+    // Si llega a 9 (homeLaneLength + 1), significa que entra directo a 'finished'
+    if (stepsIntoLane === homeLaneLength + 1) {
+      return { status: 'finished', lanePosition: stepsIntoLane };
+    }
+    if (stepsIntoLane > homeLaneLength + 1) {
+      return null; // Movimiento inválido, se pasa de la meta
+    }
+    
+    return { status: 'lane', lanePosition: stepsIntoLane };
   }
 
+  // 4. Si el dado es menor o igual a la distancia hasta la entrada,
+  // la ficha simplemente avanza de forma normal por la pista general.
   return { status: 'track', position: (position + dice) % trackLength };
 }
 
@@ -737,10 +820,26 @@ function getLaneTarget(piece, dice) {
 function isOwnBlockingTarget(player, target, piece) {
   if (target.status === 'track') {
     const occupants = getTrackOccupants().get(target.position) || [];
-    if (isSafeSquare(target.position)) {
-      return occupants.length > 0;
+    
+    // 1. Si la casilla destino es tu propia salida
+    if (target.position === player.startIndex) {
+      return occupants.length >= 2;
     }
-    return occupants.some((entry) => entry.player === player);
+    
+    // 2. Si es una casilla segura (pero no tu salida)
+    if (isSafeSquare(target.position)) {
+      // En casillas seguras pueden cooperar dos fichas cualesquiera.
+      // Bloquea solo si ya está al máximo de su capacidad (2 fichas).
+      return occupants.length >= 2;
+    }
+    
+    // 3. Casillas normales (no seguras)
+    // Cuentas cuántas fichas tuyas ya hay en esa casilla.
+    const myOccupantsCount = occupants.filter((entry) => entry.player === player).length;
+    
+    // Bloquea si YA tienes 2 fichas allí (el puente ya está completo).
+    // Si tienes 1, te dejará mover la segunda para formar el puente.
+    return myOccupantsCount >= 2;
   }
 
   if (target.status === 'lane') {
@@ -756,6 +855,54 @@ function isOwnBlockingTarget(player, target, piece) {
   return false;
 }
 
+function isPathBlocked(fromPosition, steps, player, isLane = false) {
+  // Si nos movemos por el carril final (lane)
+  if (isLane) {
+    // Revisamos las casillas intermedias del carril
+    for (let i = 1; i < steps; i++) {
+      const checkLanePos = fromPosition + i;
+      const laneOccupants = player.pieces.filter(
+        (p) => p.status === 'lane' && p.lanePosition === checkLanePos
+      ).length;
+      
+      // En el carril, si hay otra ficha propia en una posición intermedia, ¿bloquea?
+      // Nota: Según reglas oficiales, en el carril de meta no se suelen permitir puentes,
+      // pero si en tu lógica se pueden juntar, lo ideal es comprobar si ya hay una ficha estorbando.
+      if (laneOccupants >= 1) {
+        return true; // Camino bloqueado en el carril
+      }
+    }
+    return false;
+  }
+
+  // Si nos movemos por la pista principal (track)
+  let currentPos = fromPosition;
+  for (let i = 1; i <= steps; i++) {
+    // Avanzamos una casilla
+    currentPos = (currentPos + 1) % trackLength;
+
+    // Si es la última casilla (el destino final), no la evaluamos aquí como "bloqueo de camino".
+    // Eso ya lo controla la función isOwnBlockingTarget que modificamos antes.
+    if (i === steps) break;
+
+    // Si en el siguiente paso la ficha tendría que meterse al carril de color
+    if (currentPos === player.entranceIndex) {
+      // Calculamos cuántos pasos le quedan por dar, restando los que ya dio en la pista
+      const remainingSteps = steps - i;
+      // Si le quedaban pasos, el siguiente paso (remainingSteps) ya es entrar al carril (posición 0 del carril)
+      return isPathBlocked(0, remainingSteps, player, true);
+    }
+
+    // Comprobamos cuántas fichas totales hay en esta casilla intermedia de la pista
+    const occupants = getTrackOccupants().get(currentPos) || [];
+    if (occupants.length >= 2) {
+      return true; // ¡HAY UN PUENTE! El camino está bloqueado.
+    }
+  }
+
+  return false;
+}
+
 function getAvailableMoves(player, dice) {
   const moves = [];
   const homePieces = player.pieces.filter((piece) => piece.status === 'home');
@@ -764,7 +911,9 @@ function getAvailableMoves(player, dice) {
     homePieces.forEach((piece) => {
       const target = { status: 'track', position: player.startIndex };
       if (!isOwnBlockingTarget(player, target, piece)) {
-        const capture = !isSafeSquare(target.position) && Boolean(hasOpponentOnTrack(target.position, player));
+        // Al salir de casa no hay casillas intermedias, así que no requiere verificar camino saltado
+        const isExitSquare = target.position === player.startIndex;
+        const capture = (!isSafeSquare(target.position) || isExitSquare) && Boolean(hasOpponentOnTrack(target.position, player));
         moves.push({ type: 'exit', piece, to: target, capture });
       }
     });
@@ -772,17 +921,23 @@ function getAvailableMoves(player, dice) {
 
   player.pieces.forEach((piece) => {
     if (piece.status === 'track') {
-      const target = getTrackTarget(piece.position, dice, player);
-      if (target && !isOwnBlockingTarget(player, target, piece)) {
-        const capture = target.status === 'track' && !isSafeSquare(target.position) && Boolean(hasOpponentOnTrack(target.position, player));
-        moves.push({ type: 'move', piece, to: target, capture });
+      // 1. Verificamos primero si hay un puente en el camino intermedio
+      if (!isPathBlocked(piece.position, dice, player, false)) {
+        const target = getTrackTarget(piece.position, dice, player);
+        if (target && !isOwnBlockingTarget(player, target, piece)) {
+          const capture = target.status === 'track' && !isSafeSquare(target.position) && Boolean(hasOpponentOnTrack(target.position, player));
+          moves.push({ type: 'move', piece, to: target, capture });
+        }
       }
     }
 
     if (piece.status === 'lane') {
-      const target = getLaneTarget(piece, dice);
-      if (target && !isOwnBlockingTarget(player, target, piece)) {
-        moves.push({ type: 'move', piece, to: target, capture: false });
+      // 2. Verificamos si hay bloqueos intermedios en el carril
+      if (!isPathBlocked(piece.lanePosition, dice, player, true)) {
+        const target = getLaneTarget(piece, dice);
+        if (target && !isOwnBlockingTarget(player, target, piece)) {
+          moves.push({ type: 'move', piece, to: target, capture: false });
+        }
       }
     }
   });
