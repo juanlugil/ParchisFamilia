@@ -370,8 +370,8 @@ button:disabled {
 
 .piece-token {
   position: absolute;
-  width: 48px;
-  height: 48px;
+  width: clamp(18px, 6.3vw, 48px);
+  height: clamp(18px, 6.3vw, 48px);
   border-radius: 50%;
   display: flex;
   align-items: center;
