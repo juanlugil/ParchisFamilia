@@ -131,10 +131,14 @@ function setDiceOverlayVisibility(visible) {
 }
 
 function renderDiceDialog(message, buttons = [], showRoll = false) {
+  // 1. Configuramos el texto del mensaje principal
   diceResult.textContent = message || '';
   diceResult.classList.toggle('hidden', !message);
+  
+  // 2. Limpiamos las opciones dinámicas
   diceOptionGroup.innerHTML = '';
 
+  // 3. Generamos los botones de opciones (si los hay)
   buttons.forEach((buttonData) => {
     const button = document.createElement('button');
     button.type = 'button';
@@ -144,7 +148,19 @@ function renderDiceDialog(message, buttons = [], showRoll = false) {
     diceOptionGroup.appendChild(button);
   });
 
+  // 4. Configuramos la visibilidad del botón de lanzar dado
   rollDiceButton.classList.toggle('hidden', !showRoll);
+  
+  // --- CORRECCIÓN AQUÍ ---
+  // Buscamos la caja del diálogo real (.dice-dialog) que está dentro del overlay
+  const dialogBox = diceOverlay.querySelector('.dice-dialog');
+  
+  // Si encontramos la caja y el botón debe mostrarse, lo movemos al final de ESTA caja
+  if (dialogBox && showRoll) {
+    dialogBox.appendChild(rollDiceButton);
+  }
+
+  // 5. Ajustamos el modo de selección
   diceOverlay.classList.toggle('selection-mode', pendingMoveOptions.length > 0);
   if (pendingMoveOptions.length === 0) {
     showDiceOverlay();
@@ -158,7 +174,7 @@ function setPendingMoveOptions(options, callback, message) {
   pendingMoveCallback = callback;
   rollDiceButton.disabled = true;
   renderDiceDialog(message, [], false);
-  statusPanel.textContent = message || '';
+  statusPanel.textContent = '';
   renderAll();
 }
 
@@ -372,12 +388,12 @@ const lanePositions = {
   ],
 };
 
-const finishPositions = [
-  { left: '58%', top: '50%' },
-  { left: '50%', top: '42%' },
-  { left: '42%', top: '50%' },
-  { left: '50%', top: '58%' },
-];
+const finishPositions = {
+  red:    { left: '58%', top: '50%' },
+  green:  { left: '50%', top: '42%' },
+  yellow: { left: '42%', top: '50%' },
+  blue:   { left: '50%', top: '58%' },
+};
 
 function getPieceCoordinates(piece, player) {
   if (piece.status === 'home') {
@@ -389,7 +405,7 @@ function getPieceCoordinates(piece, player) {
   if (piece.status === 'lane') {
     return lanePositions[player.color][piece.lanePosition - 1];
   }
-  return finishPositions[piece.id - 1];
+  return finishPositions[player.color]; // <--- Cambiado de piece.id - 1 a player.color
 }
 
 function renderBoardMarkers() {
@@ -420,7 +436,7 @@ function renderBoardMarkers() {
     boardStage.appendChild(marker);
   });
 
-  finishPositions.forEach((coords, index) => {
+  Object.entries(finishPositions).forEach(([color, coords], index) => {
     const marker = document.createElement('div');
     marker.className = `board-marker finish finish-${index + 1}`;
     marker.style.left = coords.left;
@@ -682,18 +698,20 @@ function resetGameState() {
   hideDiceOverlay();
 }
 
-function startCountdown(seconds) {
+function startCountdown(seconds, initialMessage) {
   clearCountdown();
   let remaining = seconds;
   rollDiceButton.disabled = true;
   renderDiceFace(null);
-  renderDiceDialog(`Preparando primera tirada... ${remaining}`);
+  
+  // Usamos el mensaje inicial recibido
+  renderDiceDialog(`${initialMessage} ${remaining}`);
   showDiceOverlay();
 
   countdownTimer = setInterval(() => {
     remaining -= 1;
     if (remaining > 0) {
-      renderDiceDialog(`Comienza en... ${remaining}`);
+      renderDiceDialog(`${initialMessage} ${remaining}`);
       return;
     }
     clearCountdown();
@@ -725,8 +743,9 @@ function startGame() {
 
   resetGameState();
   showScreen('game');
-  statusPanel.textContent = `Empieza ${current.name}. Preparando primera tirada...`;
-  startCountdown(3);
+  const welcomeMsg = `Empieza ${current.name}. Preparando primera tirada...`;
+  statusPanel.textContent = welcomeMsg;
+  startCountdown(3, welcomeMsg); // Pasamos el mensaje al countdown
   renderAll();
 }
 
@@ -1014,9 +1033,27 @@ function captureAtTarget(target, player) {
     return false;
   }
 
+  // 1. Guardamos el color y el ID antes de reiniciar su estado en la lógica
+  const capturedColor = occupant.player.color;
+  const capturedId = occupant.piece.id;
+
   occupant.piece.status = 'home';
   occupant.piece.position = null;
   occupant.piece.lanePosition = 0;
+
+  // 2. Buscamos el elemento HTML de la ficha afectada para moverlo progresivamente
+  const pieceElements = document.querySelectorAll('.piece-token');
+  pieceElements.forEach((el) => {
+    if (el.dataset.pieceId == capturedId && el.classList.contains(capturedColor)) {
+      const homeCoords = homePositions[capturedColor][capturedId - 1];
+      if (homeCoords) {
+        // Le aplicamos las coordenadas de casa directamente al estilo inline
+        el.style.left = homeCoords.left;
+        el.style.top = homeCoords.top;
+      }
+    }
+  });
+
   return true;
 }
 
@@ -1039,7 +1076,13 @@ function applyMove(option) {
     player.pendingFinishBonus = true;
   }
 
-  renderAll();
+  if (captured) {
+    setTimeout(() => {
+      renderAll();
+    }, 800);
+  } else {
+    renderAll();
+  }
 }
 
 function finishTurn() {
@@ -1056,9 +1099,13 @@ function finishTurn() {
   currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
   const next = players[currentPlayerIndex];
   currentRoll = null;
+  
+  // CAMBIO AQUÍ: Forzamos la visualización del overlay al cambiar de turno
+  showDiceOverlay(); 
   renderDiceDialog(`Turno de ${next.name}. Pulsa "Lanzar dado" para tirar.`, [], true);
+  
   rollDiceButton.disabled = false;
-  statusPanel.textContent = `Turno de ${next.name}. Pulsa "Lanzar dado" para tirar.`;
+  statusPanel.textContent = '';
   renderAll();
 }
 
@@ -1076,7 +1123,11 @@ function handlePostMove() {
       return;
     }
     current.pendingCaptureBonus = false;
-    statusPanel.textContent = `${current.name} ha capturado una ficha, pero no hay otra ficha válida para avanzar 20 casillas.`;
+    renderDiceDialog(`${current.name} ha capturado una ficha, pero no tiene otra ficha válida para avanzar 20 casillas.`, [
+      { label: 'Continuar', onClick: () => { hideDiceOverlay(); finishTurn(); } }
+    ], false);
+    showDiceOverlay();
+    return; 
   }
 
   if (current.pendingFinishBonus) {
@@ -1090,7 +1141,11 @@ function handlePostMove() {
       return;
     }
     current.pendingFinishBonus = false;
-    statusPanel.textContent = `${current.name} ha llegado a la meta, pero no hay ficha válida para avanzar 10 casillas.`;
+    renderDiceDialog(`${current.name} ha llegado a la meta, pero no hay otra ficha válida para avanzar 10 casillas.`, [
+      { label: 'Continuar', onClick: () => { hideDiceOverlay(); finishTurn(); } }
+    ], false);
+    showDiceOverlay();
+    return;
   }
 
   if (currentRoll === 6 && current.consecutiveSixes < 3) {
@@ -1109,8 +1164,35 @@ function performMove(option) {
   if (currentScreen !== 'game') {
     return;
   }
-  clearPendingMoveSelection();
-  hideDiceOverlay();
+
+  const current = players[currentPlayerIndex];
+
+  // Comprobamos si el movimiento que se va a realizar proviene de un bonus de captura activo
+  if (current.pendingCaptureBonus) {
+    // Desactivamos el overlay y quitamos la interacción para que no se pulse nada más
+    clearPendingMoveSelection();
+    hideDiceOverlay();
+    
+    // Quitamos los estilos de parpadeo/clicables temporalmente de las fichas del tablero
+    const tokens = document.querySelectorAll('.piece-token');
+    tokens.forEach(t => t.classList.remove('clickable'));
+
+    statusPanel.textContent = `Ficha seleccionada. Contando las 20 casillas en 3 segundos...`;
+
+    // Añadimos el retraso de 3000 milisegundos (3 segundos)
+    setTimeout(() => {
+      executeMoveSteps(option);
+    }, 3000);
+  } else {
+    // Si es un movimiento normal (por dado o bonus de 10), se ejecuta al instante como antes
+    clearPendingMoveSelection();
+    hideDiceOverlay();
+    executeMoveSteps(option);
+  }
+}
+
+// Creamos esta función auxiliar para albergar el resto de la lógica original de tu performMove
+function executeMoveSteps(option) {
   applyMove(option);
   renderAll();
 
@@ -1155,13 +1237,15 @@ function rollDice() {
   diceTimer = setInterval(() => {
     const face = Math.floor(Math.random() * 6) + 1;
     renderDiceFace(face);
-    diceResult.textContent = `Resultado: ${face}`;
-    diceResult.classList.remove('hidden');
+    //diceResult.textContent = `Resultado: ${face}`;
+    //diceResult.classList.remove('hidden');
     if (Date.now() - start >= rollDuration) {
       clearInterval(diceTimer);
       diceTimer = null;
       currentRoll = face;
       renderDiceFace(face);
+      diceResult.textContent = `Resultado: ${face}`;
+      diceResult.classList.remove('hidden');
       clearResultDelayTimer();
       resultDelayTimer = setTimeout(() => {
         resultDelayTimer = null;
@@ -1206,18 +1290,26 @@ function processDiceResult(face) {
       return;
     }
     if (face === 5 && current.pieces.some((piece) => piece.status === 'home')) {
-      statusPanel.textContent = `${current.name} no puede sacar ficha de casa; la casilla inicial está bloqueada. Fin del turno.`;
-      hideDiceOverlay();
+      renderDiceDialog(`${current.name} no puede sacar ficha de casa; la casilla inicial está bloqueada.`, [
+        { label: 'Pasar Turno', onClick: () => { hideDiceOverlay(); finishTurn(); } }
+      ], false);
+      showDiceOverlay();
       finishTurn();
       return;
     }
-    statusPanel.textContent = `${current.name} no tiene movimientos posibles. Fin del turno.`;
-    hideDiceOverlay();
+      renderDiceDialog(`${current.name} no tiene movimientos posibles con el número ${face}.`, [
+      { label: 'Pasar Turno', onClick: () => { hideDiceOverlay(); finishTurn(); } }
+      ], false);
+    showDiceOverlay();
     finishTurn();
     return;
   }
 
-  setPendingMoveOptions(moves, performMove, `Turno de ${current.name}. Elige una ficha para mover con ${face}:`);
+  setPendingMoveOptions(
+    moves, 
+    performMove, 
+    `Turno de ${current.name}. Selecciona una de tus fichas parpadeantes en el tablero para moverla con el número ${face}:`
+  );
 }
 
 continueButton.addEventListener('click', openSelectionScreen);

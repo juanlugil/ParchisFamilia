@@ -121,6 +121,7 @@ button:active {
   background: rgba(16, 22, 38, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  text-align: center;
 }
 
 .dice-overlay.hidden {
@@ -205,7 +206,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.status-panel,
+
 .dice-result {
   margin-top: 18px;
   padding: 20px;
@@ -228,12 +229,15 @@ button:disabled {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
   text-align: left;
+  text-align: center;
   font-weight: 600;
 }
 
 .dice-controls {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   gap: 16px;
   margin-top: 18px;
   flex-wrap: wrap;
@@ -333,8 +337,8 @@ button:disabled {
   height: 18px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(0, 0, 0, 0.35);
+  background: transparent;
+  border: none;
   z-index: 1;
 }
 
@@ -347,11 +351,12 @@ button:disabled {
 .board-marker.lane {
   width: 12px;
   height: 12px;
-  background: rgba(255, 255, 255, 0.35);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: transparent;
+  border-color:transparent;
 }
 
 .board-marker-label {
+  display: none;
   position: absolute;
   inset: 0;
   display: grid;
@@ -377,7 +382,7 @@ button:disabled {
   align-items: center;
   justify-content: center;
   transform: translate(-50%, -50%);
-  transition: top 0.24s ease, left 0.24s ease, transform 0.24s ease;
+  transition: top 0.8s cubic-bezier(0.25, 1, 0.5, 1), left 0.8s cubic-bezier(0.25, 1, 0.5, 1), transform 0.24s ease;
   z-index: 2;
   border: none;
 }
