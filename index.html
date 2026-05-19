@@ -30,6 +30,25 @@
         <label class="file-label" for="imageBlue">Jugador Azul</label>
         <input id="imageBlue" type="file" accept="image/*" />
       </div>
+
+      <div class="dice-duration-setting" style="margin-top: 24px; text-align: center; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto;">
+        <label for="diceDurationSlider" style="display: block; font-weight: 600; margin-bottom: 12px;">
+          Tiempo de tirada de dado: <span id="diceDurationValue">3</span>s
+        </label>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <span>1</span>
+          <input 
+            type="range" 
+            id="diceDurationSlider" 
+            min="1" 
+            max="5" 
+            step="1" 
+            value="3" 
+            style="flex-grow: 1; cursor: pointer;"
+          >
+          <span>5</span>
+        </div>
+      </div>
       <div class="selection-actions">
         <button id="backButton" type="button" class="secondary">Volver</button>
         <button id="startButton" type="button" class="primary">Iniciar partida</button>

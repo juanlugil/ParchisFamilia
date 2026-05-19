@@ -1,6 +1,8 @@
 const trackLength = 68;
 const homeLaneLength = 8;
 const safeTrackIndices = new Set([4, 11, 16, 21, 28, 33, 38, 45, 50, 55, 62, 67]);
+const diceDurationSlider = document.getElementById('diceDurationSlider');
+const diceDurationValue = document.getElementById('diceDurationValue');
 
 function isSafeSquare(position) {
   return safeTrackIndices.has(position);
@@ -69,7 +71,11 @@ let resultDelayTimer = null;
 let pendingMoveOptions = [];
 let pendingMoveCallback = null;
 let currentRoll = null;
-const rollDuration = 3000;
+let rollDuration = 3000;
+
+// --- VARIABLES PARA EL DEBUG DE TIRADAS ---
+let debugDiceSequence = []; // Aquí guardaremos los números del archivo
+let debugDiceIndex = 0;     // Indica qué posición de la secuencia toca leer
 
 const statusPanel = document.getElementById('statusPanel');
 const rollDiceButton = document.getElementById('rollDiceButton');
@@ -132,7 +138,7 @@ function setDiceOverlayVisibility(visible) {
 
 function renderDiceDialog(message, buttons = [], showRoll = false) {
   // 1. Configuramos el texto del mensaje principal
-  diceResult.textContent = message || '';
+  diceResult.innerHTML = formatColorNames(message) || '';
   diceResult.classList.toggle('hidden', !message);
   
   // 2. Limpiamos las opciones dinámicas
@@ -395,6 +401,18 @@ const finishPositions = {
   blue:   { left: '50%', top: '58%' },
 };
 
+// Función para dar color a los nombres de los jugadores en los textos
+function formatColorNames(text) {
+  if (!text) return '';
+  
+  // Reemplaza las palabras clave por spans con su respectiva clase CSS
+  return text
+    .replace(/\bRojo\b/g, '<span class="text-color-red">Rojo</span>')
+    .replace(/\bVerde\b/g, '<span class="text-color-green">Verde</span>')
+    .replace(/\bAmarillo\b/g, '<span class="text-color-yellow">Amarillo</span>')
+    .replace(/\bAzul\b/g, '<span class="text-color-blue">Azul</span>');
+}
+
 function getPieceCoordinates(piece, player) {
   if (piece.status === 'home') {
     return homePositions[player.color][piece.id - 1];
@@ -410,7 +428,7 @@ function getPieceCoordinates(piece, player) {
 
 function renderBoardMarkers() {
   boardStage.innerHTML = '';
-
+  /*
   trackPositions.forEach((coords, index) => {
     const marker = document.createElement('div');
     marker.className = `board-marker${isSafeSquare(index) ? ' safe' : ''}`;
@@ -435,6 +453,7 @@ function renderBoardMarkers() {
     marker.style.top = coords.top;
     boardStage.appendChild(marker);
   });
+  */
 
   Object.entries(finishPositions).forEach(([color, coords], index) => {
     const marker = document.createElement('div');
@@ -704,18 +723,29 @@ function startCountdown(seconds, initialMessage) {
   rollDiceButton.disabled = true;
   renderDiceFace(null);
   
-  // Usamos el mensaje inicial recibido
-  renderDiceDialog(`${initialMessage} ${remaining}`);
+  // HTML estructurado para el mensaje y el círculo de carga
+  const loadingHTML = `
+    <div>${formatColorNames(initialMessage)}</div>
+    <div class="loader-container">
+      <div class="loading-spinner"></div>
+    </div>
+  `;
+  
+  // Mostramos el mensaje inicial con el spinner
+  renderDiceDialog(loadingHTML);
   showDiceOverlay();
 
   countdownTimer = setInterval(() => {
     remaining -= 1;
     if (remaining > 0) {
-      renderDiceDialog(`${initialMessage} ${remaining}`);
+      // Mantenemos el spinner visible durante los segundos que dure la cuenta
+      renderDiceDialog(loadingHTML);
       return;
     }
     clearCountdown();
-    renderDiceDialog(`Ya puedes tirar el dado`, [], true);
+    
+    // Al terminar el tiempo, quitamos el spinner y pedimos lanzar el dado
+    renderDiceDialog('Pulsa "Lanzar dado"', [], true);
     rollDiceButton.disabled = false;
   }, 1000);
 }
@@ -744,9 +774,20 @@ function startGame() {
   resetGameState();
   showScreen('game');
   const welcomeMsg = `Empieza ${current.name}. Preparando primera tirada...`;
-  statusPanel.textContent = welcomeMsg;
+  //statusPanel.textContent = welcomeMsg;
   startCountdown(3, welcomeMsg); // Pasamos el mensaje al countdown
   renderAll();
+}
+
+if (diceDurationSlider && diceDurationValue) {
+  diceDurationSlider.addEventListener('input', (e) => {
+    const seconds = e.target.value;
+    // 1. Actualiza el texto en el HTML (ej: "Tiempo de tirada de dado: 4s")
+    diceDurationValue.textContent = seconds;
+    
+    // 2. Multiplica por 1000 porque JavaScript gestiona el tiempo en milisegundos (4s = 4000ms)
+    rollDuration = seconds * 1000;
+  });
 }
 
 function renderAll() {
@@ -1102,7 +1143,7 @@ function finishTurn() {
   
   // CAMBIO AQUÍ: Forzamos la visualización del overlay al cambiar de turno
   showDiceOverlay(); 
-  renderDiceDialog(`Turno de ${next.name}. Pulsa "Lanzar dado" para tirar.`, [], true);
+  renderDiceDialog(`Turno de ${next.name}. Pulsa "Lanzar dado".`, [], true);
   
   rollDiceButton.disabled = false;
   statusPanel.textContent = '';
@@ -1149,7 +1190,7 @@ function handlePostMove() {
   }
 
   if (currentRoll === 6 && current.consecutiveSixes < 3) {
-    statusPanel.textContent = `${current.name} sacó un 6 y puede tirar otra vez.`;
+    //statusPanel.textContent = `${current.name} sacó un 6 y puede tirar otra vez.`;
     rollDiceButton.disabled = false;
     renderDiceFace(currentRoll);
     renderDiceDialog(`Turno de ${current.name}. Puedes tirar otra vez con 6.`, [], true);
@@ -1234,22 +1275,51 @@ function rollDice() {
   renderDiceDialog('Lanzando...', [], false);
 
   const start = Date.now();
+  
   diceTimer = setInterval(() => {
-    const face = Math.floor(Math.random() * 6) + 1;
-    renderDiceFace(face);
-    //diceResult.textContent = `Resultado: ${face}`;
-    //diceResult.classList.remove('hidden');
+    // La animación visual sigue mostrando caras rápidas al azar
+    const randomVisualFace = Math.floor(Math.random() * 6) + 1;
+    renderDiceFace(randomVisualFace);
+    
     if (Date.now() - start >= rollDuration) {
       clearInterval(diceTimer);
       diceTimer = null;
-      currentRoll = face;
-      renderDiceFace(face);
-      diceResult.textContent = `Resultado: ${face}`;
+      
+      let finalFace;
+      
+      // Verificamos si la secuencia del archivo tiene números cargados
+      if (debugDiceSequence && debugDiceSequence.length > 0) {
+        finalFace = debugDiceSequence[debugDiceIndex];
+        
+        console.log(`[DEBUG] Leyendo índice [${debugDiceIndex}] del archivo. Valor encontrado: ${finalFace}`);
+        
+        // Avanzamos al siguiente número. Si llega al final, vuelve a empezar (0)
+        debugDiceIndex = (debugDiceIndex + 1) % debugDiceSequence.length;
+      } else {
+        // Si el archivo falló o está vacío, usa el Math.random original
+        finalFace = Math.floor(Math.random() * 6) + 1;
+        console.log(`[ALERTA] Archivo vacío. Usando dado normal: ${finalFace}`);
+      }
+
+      // Aseguramos que sea un número entero válido por seguridad
+      finalFace = parseInt(finalFace, 10);
+      if (isNaN(finalFace) || finalFace < 1 || finalFace > 6) {
+        finalFace = 1; // Rescate en caso de número corrupto en el .txt
+        console.error("[ERROR] El número extraído del archivo no es del 1 al 6. Forzado a 1.");
+      }
+      
+      currentRoll = finalFace;
+      renderDiceFace(finalFace);
+      
+      // Mostramos el resultado final
+      diceResult.textContent = `Resultado: ${finalFace}`;
       diceResult.classList.remove('hidden');
+
       clearResultDelayTimer();
       resultDelayTimer = setTimeout(() => {
         resultDelayTimer = null;
-        processDiceResult(face);
+        // Ejecutamos la lógica de mover fichas pasándole el número correcto
+        processDiceResult(finalFace);
       }, 1000);
     }
   }, 120);
@@ -1285,7 +1355,7 @@ function processDiceResult(face) {
   if (moves.length === 0) {
     if (face === 6) {
       renderDiceDialog(`${current.name} no tiene movimientos con 6, pero puede tirar otra vez.`, [], true);
-      statusPanel.textContent = `${current.name} sigue con 6.`;
+      //statusPanel.textContent = `${current.name} sigue con 6.`;
       rollDiceButton.disabled = false;
       return;
     }
@@ -1311,6 +1381,35 @@ function processDiceResult(face) {
     `Turno de ${current.name}. Selecciona una de tus fichas parpadeantes en el tablero para moverla con el número ${face}:`
   );
 }
+
+async function loadDebugTiradas() {
+  try {
+    // Añadimos un parámetro random para evitar que el navegador guarde en caché el archivo viejo si lo modificas
+    const response = await fetch('tiradas.txt?v=' + Math.random());
+    if (!response.ok) throw new Error(`Estado HTTP: ${response.status}`);
+    
+    const text = await response.text();
+    console.log("📄 Contenido crudo leído de tiradas.txt:", text);
+
+    // Dividimos por comas, limpiamos espacios y nos aseguramos de que sean Números puros
+    debugDiceSequence = text.split(',')
+                            .map(num => num.trim())
+                            .filter(num => num !== "")
+                            .map(num => parseInt(num, 10))
+                            .filter(num => !isNaN(num) && num >= 1 && num <= 6);
+    
+    if (debugDiceSequence.length === 0) {
+      console.error("❌ El archivo tiradas.txt se leyó, pero no se encontraron números válidos del 1 al 6.");
+    } else {
+      console.log('🎲 SECUENCIA DEBUG CARGADA CON ÉXITO:', debugDiceSequence);
+    }
+  } catch (error) {
+    console.error('⚠️ Error crítico cargando tiradas.txt. Usando modo aleatorio.', error);
+  }
+}
+
+// Ejecutar al cargar la página
+loadDebugTiradas();
 
 continueButton.addEventListener('click', openSelectionScreen);
 closeButton.addEventListener('click', closeApp);
