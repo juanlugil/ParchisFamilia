@@ -1,13 +1,23 @@
-const trackLength = 68;
-const homeLaneLength = 8;
+// --- CONFIGURACIÓN Y CONSTANTES DEL TABLERO ---
+const trackLength = 68; // Longitud total de la pista circular común
+const homeLaneLength = 8; // Número de casillas en el pasillo de meta (carril de color)
+// Índices de las casillas seguras del tablero circular (donde no se puede capturar)
 const safeTrackIndices = new Set([4, 11, 16, 21, 28, 33, 38, 45, 50, 55, 62, 67]);
+
+// Elementos del DOM para la configuración de la velocidad del dado
 const diceDurationSlider = document.getElementById('diceDurationSlider');
 const diceDurationValue = document.getElementById('diceDurationValue');
 
+/**
+ * Determina si una casilla de la pista común es segura.
+ * @param {number} position - Índice de la casilla en la pista común.
+ * @returns {boolean} True si la casilla es segura, false en caso contrario.
+ */
 function isSafeSquare(position) {
   return safeTrackIndices.has(position);
 }
 
+// --- DEFINICIÓN DE LOS JUGADORES ---
 const players = [
   {
     name: 'Rojo',
@@ -15,8 +25,8 @@ const players = [
     inputId: 'imageRed',
     homeId: 'homeRed',
     image: null,
-    startIndex: 38,
-    entranceIndex: 33,
+    startIndex: 38,       // Casilla de salida al tablero común
+    entranceIndex: 33,     // Última casilla antes de desviarse al carril de meta rojo
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -28,8 +38,8 @@ const players = [
     inputId: 'imageGreen',
     homeId: 'homeGreen',
     image: null,
-    startIndex: 55,
-    entranceIndex: 50,
+    startIndex: 55,       // Casilla de salida al tablero común
+    entranceIndex: 50,     // Última casilla antes de desviarse al carril de meta verde
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -41,8 +51,8 @@ const players = [
     inputId: 'imageYellow',
     homeId: 'homeYellow',
     image: null,
-    startIndex: 4,
-    entranceIndex: 67,
+    startIndex: 4,        // Casilla de salida al tablero común
+    entranceIndex: 67,     // Última casilla antes de desviarse al carril de meta amarillo
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -54,8 +64,8 @@ const players = [
     inputId: 'imageBlue',
     homeId: 'homeBlue',
     image: null,
-    startIndex: 21,
-    entranceIndex: 16,
+    startIndex: 21,       // Casilla de salida al tablero común
+    entranceIndex: 16,     // Última casilla antes de desviarse al carril de meta azul
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -63,6 +73,7 @@ const players = [
   },
 ];
 
+// --- VARIABLES DE CONTROL DEL ESTADO DEL JUEGO ---
 let currentPlayerIndex = 0;
 let diceTimer = null;
 let countdownTimer = null;
@@ -71,12 +82,13 @@ let resultDelayTimer = null;
 let pendingMoveOptions = [];
 let pendingMoveCallback = null;
 let currentRoll = null;
-let rollDuration = 3000;
+let rollDuration = 3000; // Duración por defecto de la animación del dado en ms
 
-// --- VARIABLES PARA EL DEBUG DE TIRADAS ---
-let debugDiceSequence = []; // Aquí guardaremos los números del archivo
-let debugDiceIndex = 0;     // Indica qué posición de la secuencia toca leer
+// --- VARIABLES PARA EL DEBUG DE TIRADAS (Cargadas desde archivo externo) ---
+let debugDiceSequence = []; // Lista de números predefinidos
+let debugDiceIndex = 0;     // Índice del número actual de la secuencia
 
+// --- REFERENCIAS A ELEMENTOS DEL DOM ---
 const statusPanel = document.getElementById('statusPanel');
 const rollDiceButton = document.getElementById('rollDiceButton');
 const diceFace = document.getElementById('diceFace');
@@ -94,6 +106,11 @@ const diceOverlay = document.getElementById('diceOverlay');
 const diceOptionGroup = document.getElementById('diceOptionGroup');
 let currentScreen = 'welcome';
 
+/**
+ * Lee un archivo de imagen seleccionado por el usuario y lo convierte a Base64.
+ * @param {File} file - El archivo de imagen.
+ * @returns {Promise<string>} Promesa con la URL en formato DataURL.
+ */
 function readImageFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -103,6 +120,9 @@ function readImageFile(file) {
   });
 }
 
+/**
+ * Limpia el temporizador de la animación visual del dado.
+ */
 function clearDiceTimer() {
   if (diceTimer) {
     clearInterval(diceTimer);
@@ -110,12 +130,18 @@ function clearDiceTimer() {
   }
 }
 
+/**
+ * Muestra el panel superpuesto del dado en primer plano.
+ */
 function showDiceOverlay() {
   diceOverlay.classList.remove('hidden');
   diceOverlay.style.display = 'grid';
   diceOverlay.style.zIndex = '10000';
 }
 
+/**
+ * Oculta el panel superpuesto del dado y limpia los temporizadores asociados.
+ */
 function hideDiceOverlay() {
   clearDiceTimer();
   diceOverlay.classList.add('hidden');
@@ -127,6 +153,10 @@ function hideDiceOverlay() {
   clearPendingMoveSelection();
 }
 
+/**
+ * Cambia la visibilidad del overlay según el parámetro lógico.
+ * @param {boolean} visible 
+ */
 function setDiceOverlayVisibility(visible) {
   if (visible) {
     showDiceOverlay();
@@ -136,15 +166,21 @@ function setDiceOverlayVisibility(visible) {
   diceOverlay.style.display = 'none';
 }
 
+/**
+ * Actualiza el modal/diálogo del dado con un mensaje específico y opciones interactivas.
+ * @param {string} message - Texto informativo a mostrar (admite marcado HTML estilizado).
+ * @param {Array} buttons - Colección de botones de acción con texto y callback.
+ * @param {boolean} showRoll - Flag para habilitar o deshabilitar el botón de tirar.
+ */
 function renderDiceDialog(message, buttons = [], showRoll = false) {
-  // 1. Configuramos el texto del mensaje principal
+  // 1. Configuramos el texto informativo con formato de colores
   diceResult.innerHTML = formatColorNames(message) || '';
   diceResult.classList.toggle('hidden', !message);
   
-  // 2. Limpiamos las opciones dinámicas
+  // 2. Limpiamos cualquier botón de opción previa
   diceOptionGroup.innerHTML = '';
 
-  // 3. Generamos los botones de opciones (si los hay)
+  // 3. Generamos e inyectamos los nuevos botones de opciones
   buttons.forEach((buttonData) => {
     const button = document.createElement('button');
     button.type = 'button';
@@ -154,19 +190,15 @@ function renderDiceDialog(message, buttons = [], showRoll = false) {
     diceOptionGroup.appendChild(button);
   });
 
-  // 4. Configuramos la visibilidad del botón de lanzar dado
+  // 4. Controlamos la visibilidad y posicionamiento del botón de lanzar dado
   rollDiceButton.classList.toggle('hidden', !showRoll);
   
-  // --- CORRECCIÓN AQUÍ ---
-  // Buscamos la caja del diálogo real (.dice-dialog) que está dentro del overlay
   const dialogBox = diceOverlay.querySelector('.dice-dialog');
-  
-  // Si encontramos la caja y el botón debe mostrarse, lo movemos al final de ESTA caja
   if (dialogBox && showRoll) {
     dialogBox.appendChild(rollDiceButton);
   }
 
-  // 5. Ajustamos el modo de selección
+  // 5. Ajustamos el comportamiento visual según haya elecciones de ficha pendientes
   diceOverlay.classList.toggle('selection-mode', pendingMoveOptions.length > 0);
   if (pendingMoveOptions.length === 0) {
     showDiceOverlay();
@@ -175,6 +207,12 @@ function renderDiceDialog(message, buttons = [], showRoll = false) {
   }
 }
 
+/**
+ * Establece un conjunto de opciones de fichas que el jugador actual puede mover.
+ * @param {Array} options - Las opciones disponibles.
+ * @param {Function} callback - El método que procesará la opción seleccionada.
+ * @param {string} message - El mensaje que acompaña la elección.
+ */
 function setPendingMoveOptions(options, callback, message) {
   pendingMoveOptions = options;
   pendingMoveCallback = callback;
@@ -184,6 +222,9 @@ function setPendingMoveOptions(options, callback, message) {
   renderAll();
 }
 
+/**
+ * Limpia la cola de selección de movimiento pendiente.
+ */
 function clearPendingMoveSelection() {
   const hadPendingOptions = pendingMoveOptions.length > 0;
   pendingMoveOptions = [];
@@ -193,10 +234,18 @@ function clearPendingMoveSelection() {
   }
 }
 
+/**
+ * Retorna la opción de movimiento vinculada a una ficha en concreto.
+ * @param {Object} piece - Ficha a evaluar.
+ */
 function getPendingOptionForPiece(piece) {
   return pendingMoveOptions.find((option) => option.piece === piece) || null;
 }
 
+/**
+ * Selecciona e inicia el desplazamiento de una ficha.
+ * @param {Object} piece - Ficha que recibe la acción del jugador.
+ */
 function selectPiece(piece) {
   if (currentScreen !== 'game') {
     return;
@@ -211,6 +260,10 @@ function selectPiece(piece) {
   callback?.(option);
 }
 
+/**
+ * Dibuja los puntos sobre la cara visual del dado en 2D.
+ * @param {number|null} face - Número del 1 al 6 o null para vaciar la cara.
+ */
 function renderDiceFace(face) {
   diceFace.innerHTML = '';
   if (!face) {
@@ -237,13 +290,16 @@ function renderDiceFace(face) {
   });
 }
 
+/**
+ * Inicializa la estructura interna de las 4 fichas por jugador.
+ */
 function buildPlayers() {
   players.forEach((player) => {
     player.pieces = Array.from({ length: 4 }, (_, index) => ({
       id: index + 1,
-      status: 'home',
-      position: null,
-      lanePosition: 0,
+      status: 'home',      // Estados válidos: 'home', 'track', 'lane', 'finished'
+      position: null,      // Posición numérica en pista común
+      lanePosition: 0,     // Posición numérica en pasillo de meta
     }));
     player.consecutiveSixes = 0;
     player.pendingCaptureBonus = false;
@@ -251,8 +307,11 @@ function buildPlayers() {
   });
 }
 
+// Inicialización de la partida de prueba
 buildPlayers();
 
+// --- MAPAS DE COORDENADAS PARA LA RENDERIZACIÓN VISUAL ---
+// Coordenadas absolutas en % del tablero para el circuito general de 68 casillas
 const trackPositions = [
   { left: '3%', top: '60.56%' },
   { left: '7.56%', top: '60.56%' },
@@ -324,6 +383,7 @@ const trackPositions = [
   { left: '3%', top: '50%' },
 ];
 
+// Coordenadas absolutas para las 4 fichas retenidas en cada nido o casa original
 const homePositions = {
   red: [
     { left: '72%', top: '08%' },
@@ -351,6 +411,7 @@ const homePositions = {
   ],
 };
 
+// Coordenadas para los 7 escalones de entrada de color antes de la meta definitiva
 const lanePositions = {
   red: [
     { left: '92.40%', top: '50%' },
@@ -360,7 +421,6 @@ const lanePositions = {
     { left: '73.22%', top: '50%' },
     { left: '68.67%', top: '50%' },
     { left: '63.60%', top: '50%' },
-    //{ left: '58%', top: '50%' },
   ],
   green: [
     { left: '50%', top: '7.56%' },
@@ -370,7 +430,6 @@ const lanePositions = {
     { left: '50%', top: '26.60%' },
     { left: '50%', top: '31.80%' },
     { left: '50%', top: '36.60%' },
-    //{ left: '50%', top: '42%' },
   ],
   yellow: [
     { left: '7.56%', top: '50%' },
@@ -380,7 +439,6 @@ const lanePositions = {
     { left: '26.78%', top: '50%' },
     { left: '32.00%', top: '50%' },
     { left: '36.60%', top: '50%' },
-    //{ left: '42.00%', top: '50%' },
   ],
   blue: [
     { left: '50%', top: '92.60%' },
@@ -390,10 +448,10 @@ const lanePositions = {
     { left: '50%', top: '73.90%' },
     { left: '50%', top: '69.00%' },
     { left: '50%', top: '63.90%' },
-    //{ left: '50%', top: '58%' },
   ],
 };
 
+// Coordenadas del triángulo de meta de cada color en el centro
 const finishPositions = {
   red:    { left: '58%', top: '50%' },
   green:  { left: '50%', top: '42%' },
@@ -401,11 +459,13 @@ const finishPositions = {
   blue:   { left: '50%', top: '58%' },
 };
 
-// Función para dar color a los nombres de los jugadores en los textos
+/**
+ * Reemplaza nombres de jugadores en cadenas de texto por contenedores HTML coloreados.
+ * @param {string} text - Texto a formatear.
+ * @returns {string} Código HTML resultante con estilos en línea o clases.
+ */
 function formatColorNames(text) {
   if (!text) return '';
-  
-  // Reemplaza las palabras clave por spans con su respectiva clase CSS
   return text
     .replace(/\bRojo\b/g, '<span class="text-color-red">Rojo</span>')
     .replace(/\bVerde\b/g, '<span class="text-color-green">Verde</span>')
@@ -413,6 +473,12 @@ function formatColorNames(text) {
     .replace(/\bAzul\b/g, '<span class="text-color-blue">Azul</span>');
 }
 
+/**
+ * Obtiene el par de coordenadas (top, left) asignado a la posición actual de una ficha.
+ * @param {Object} piece - Ficha a evaluar.
+ * @param {Object} player - Propietario de la ficha.
+ * @returns {Object} {left, top} en valor porcentual.
+ */
 function getPieceCoordinates(piece, player) {
   if (piece.status === 'home') {
     return homePositions[player.color][piece.id - 1];
@@ -423,38 +489,14 @@ function getPieceCoordinates(piece, player) {
   if (piece.status === 'lane') {
     return lanePositions[player.color][piece.lanePosition - 1];
   }
-  return finishPositions[player.color]; // <--- Cambiado de piece.id - 1 a player.color
+  return finishPositions[player.color];
 }
 
+/**
+ * Pinta los marcadores de la zona del centro en el Canvas del tablero.
+ */
 function renderBoardMarkers() {
   boardStage.innerHTML = '';
-  /*
-  trackPositions.forEach((coords, index) => {
-    const marker = document.createElement('div');
-    marker.className = `board-marker${isSafeSquare(index) ? ' safe' : ''}`;
-    marker.style.left = coords.left;
-    marker.style.top = coords.top;
-    marker.setAttribute('aria-hidden', 'true');
-
-    if (isSafeSquare(index)) {
-      const label = document.createElement('span');
-      label.className = 'board-marker-label';
-      label.textContent = (index + 1).toString();
-      marker.appendChild(label);
-    }
-
-    boardStage.appendChild(marker);
-  });
-
-  Object.values(lanePositions).flat().forEach((coords) => {
-    const marker = document.createElement('div');
-    marker.className = 'board-marker lane';
-    marker.style.left = coords.left;
-    marker.style.top = coords.top;
-    boardStage.appendChild(marker);
-  });
-  */
-
   Object.entries(finishPositions).forEach(([color, coords], index) => {
     const marker = document.createElement('div');
     marker.className = `board-marker finish finish-${index + 1}`;
@@ -464,61 +506,23 @@ function renderBoardMarkers() {
   });
 }
 
+/**
+ * Modifica o dibuja los nidos (casas de salida) con las imágenes de perfil asignadas por los jugadores.
+ */
 function renderHomeAreas() {
-  // remove previous home areas
   const prev = boardStage.querySelectorAll('.home-area');
   prev.forEach((el) => el.remove());
 
-  // Inner corner index for each color in `homePositions` arrays
-  const innerIndex = {
-    red: 1,    // top-right
-    blue: 3,   // bottom-right
-    yellow: 2, // bottom-left
-    green: 0,  // top-left
-  };
-
   players.forEach((player) => {
-    const homes = homePositions[player.color];
-    const idx = innerIndex[player.color] ?? 0;
-    const inner = homes[idx];
-    const innerLeft = parseFloat(inner.left);
-    const innerTop = parseFloat(inner.top);
-
-    // Build container anchored so that the inner corner remains at the exact home coord
     let left, top, width, height;
     if (player.color === 'yellow') {
-      // inner at top-right -> container from left:0 to innerLeft, top:innerTop to bottom
-      left = `1%`;
-      top = `67%`;
-      width = `32%`;
-      height = `32%`;
-      //width = `${innerLeft}%`;
-      //height = `${100 - innerTop}%`;
+      left = '1%'; top = '67%'; width = '32%'; height = '32%';
     } else if (player.color === 'blue') {
-      // inner at top-left -> container from innerLeft to right, top:innerTop to bottom
-      left = `67%`;
-      top = `67%`;
-      width = `32%`;
-      height = `32%`;
-      //width = `${100 - innerLeft}%`;
-      //height = `${100 - innerTop}%`;
+      left = '67%'; top = '67%'; width = '32%'; height = '32%';
     } else if (player.color === 'red') {
-      // inner at bottom-left -> container from innerLeft to right, top:0 to innerTop
-      left = `67%`;
-      top = `1%`;
-      width = `32%`;
-      height = `32%`;
-      //width = `${100 - innerLeft}%`;
-      //height = `${innerTop}%`;
+      left = '67%'; top = '1%'; width = '32%'; height = '32%';
     } else { // green
-      // inner at top-left (green specified as top-left earlier) but expansion to top-left
-      // inner at top-left -> container from left:0 top:0 to inner
-      left = `1%`;
-      top = `1%`;
-      width = `32%`;
-      height = `32%`;
-      //width = `${innerLeft}%`;
-      //height = `${innerTop}%`;
+      left = '1%'; top = '1%'; width = '32%'; height = '32%';
     }
 
     const container = document.createElement('div');
@@ -545,13 +549,15 @@ function renderHomeAreas() {
   });
 }
 
+/**
+ * Dibuja todas las fichas activas en pantalla aplicando lógica de separación para las que cohabitan.
+ */
 function renderBoardPieces() {
-  // 1. Primero, creamos un mapa para contar cuántas fichas hay en cada posición del tablero
   const positionCounters = {};
 
+  // 1. Agrupar las fichas por su ubicación en el tablero para detectar colisiones
   players.forEach((player) => {
     player.pieces.forEach((piece) => {
-      // Creamos una clave única según el estado de la ficha
       let key = '';
       if (piece.status === 'home') {
         key = `home-${player.color}-${piece.id}`;
@@ -560,10 +566,9 @@ function renderBoardPieces() {
       } else if (piece.status === 'lane') {
         key = `lane-${player.color}-${piece.lanePosition}`;
       } else if (piece.status === 'finished') {
-        key = `finish-${piece.id}`;
+        key = `finish-${player.color}`;
       }
 
-      // Inicializamos o incrementamos el contador para esta posición exacta
       if (!positionCounters[key]) {
         positionCounters[key] = [];
       }
@@ -571,45 +576,40 @@ function renderBoardPieces() {
     });
   });
 
-  // 2. Ahora dibujamos las fichas aplicando el desplazamiento si comparten casilla
+  // 2. Renderizar cada ficha con un desplazamiento progresivo en caso de compartir casilla
   players.forEach((player) => {
     player.pieces.forEach((piece) => {
       const coords = getPieceCoordinates(piece, player);
       
-      // Reconstruimos la clave para buscar en nuestro mapa de posiciones
       let key = '';
       if (piece.status === 'home') key = `home-${player.color}-${piece.id}`;
       else if (piece.status === 'track') key = `track-${piece.position}`;
       else if (piece.status === 'lane') key = `lane-${player.color}-${piece.lanePosition}`;
-      else if (piece.status === 'finished') key = `finish-${piece.id}`;
+      else if (piece.status === 'finished') key = `finish-${player.color}`;
 
       const occupants = positionCounters[key] || [];
-      
-      // Encontrarnos a nosotros mismos dentro de los ocupantes de esta casilla
       const myIndex = occupants.findIndex(o => o.piece === piece);
 
-      // Calculamos los offsets por defecto (sin desplazamiento)
       let offsetX = 0;
       let offsetY = 0;
 
-      // Si hay 2 fichas en la misma casilla de la pista (track) o carril (lane)
-      if (occupants.length > 1 && (piece.status === 'track' || piece.status === 'lane')) {
-        // Si somos la primera ficha, la movemos un poco a la izquierda (-8px)
-        // Si somos la segunda ficha, la movemos un poco a la derecha (+8px)
-        offsetX = myIndex === 0 ? -8 : 8;
-        
-        // Opcional: puedes añadir un pequeño desplazamiento vertical si el tablero lo requiere,
-        // pero habitualmente con separarlas en horizontal (X) ya es suficiente para el parchís.
-        offsetY = myIndex === 0 ? -2 : 2; 
+      // Si cohabitan 2 o más fichas en pista o carril, aplicamos offsets para que no se oculten totalmente
+      if (occupants.length > 1 && (piece.status === 'track' || piece.status === 'lane' || piece.status === 'finished')) {
+        if (occupants.length === 2) {
+          offsetX = myIndex === 0 ? -6 : 6;
+          offsetY = myIndex === 0 ? -2 : 2;
+        } else {
+          // Soporte hasta para un máximo de 4 fichas apiladas (ej: en meta o barreras seguras)
+          const angle = (myIndex * (360 / occupants.length) * Math.PI) / 180;
+          offsetX = Math.round(Math.cos(angle) * 8);
+          offsetY = Math.round(Math.sin(angle) * 8);
+        }
       }
 
       const token = document.createElement('div');
       token.className = `piece-token ${player.color}`;
-      
-      // Convertimos las coordenadas base a float para poder sumar los píxeles del offset de forma limpia usando calc()
       token.style.left = `calc(${coords.left} + ${offsetX}px)`;
       token.style.top = `calc(${coords.top} + ${offsetY}px)`;
-      
       token.style.backgroundColor = player.image ? 'transparent' : player.color;
       token.dataset.player = player.color;
       token.dataset.pieceId = piece.id;
@@ -633,29 +633,39 @@ function renderBoardPieces() {
   });
 }
 
+/**
+ * Vincula la carga de imágenes personalizadas por el usuario para su uso como fichas.
+ */
 function setupInputHandlers() {
   players.forEach((player) => {
     const input = document.getElementById(player.inputId);
-    input.addEventListener('change', async (event) => {
-      const file = event.target.files[0];
-      if (!file) {
-        player.image = null;
-        updatePlayerPreview(player);
-        return;
-      }
-      try {
-        player.image = await readImageFile(file);
-        updatePlayerPreview(player);
-      } catch (error) {
-        alert('Error cargando la imagen de ' + player.name);
-        player.image = null;
-      }
-    });
+    if (input) {
+      input.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) {
+          player.image = null;
+          updatePlayerPreview(player);
+          return;
+        }
+        try {
+          player.image = await readImageFile(file);
+          updatePlayerPreview(player);
+        } catch (error) {
+          console.error('Error cargando la imagen de ' + player.name, error);
+          player.image = null;
+        }
+      });
+    }
   });
 }
 
+/**
+ * Actualiza visualmente el estado del cargador de imágenes.
+ * @param {Object} player - El objeto del jugador.
+ */
 function updatePlayerPreview(player) {
   const input = document.getElementById(player.inputId);
+  if (!input) return;
   const label = input.previousElementSibling;
   if (player.image) {
     label.textContent = `${player.name} (imagen cargada)`;
@@ -666,10 +676,17 @@ function updatePlayerPreview(player) {
   }
 }
 
+/**
+ * Comprueba si al menos un jugador ha subido una foto personalizada.
+ */
 function getAllImagesLoaded() {
   return players.some((player) => player.image);
 }
 
+/**
+ * Transición limpia entre las diferentes pantallas de la SPA.
+ * @param {string} screen - 'welcome', 'selection' o 'game'.
+ */
 function showScreen(screen) {
   currentScreen = screen;
   welcomePanel.classList.toggle('hidden', screen !== 'welcome');
@@ -678,6 +695,7 @@ function showScreen(screen) {
   resetGameState();
   selectionStatus.classList.add('hidden');
   rollDiceButton.disabled = screen !== 'game';
+  
   if (screen === 'game') {
     statusPanel.classList.remove('hidden');
     renderAll();
@@ -686,6 +704,9 @@ function showScreen(screen) {
   }
 }
 
+/**
+ * Limpia y detiene la cuenta atrás del panel.
+ */
 function clearCountdown() {
   if (countdownTimer) {
     clearInterval(countdownTimer);
@@ -707,6 +728,9 @@ function clearResultDelayTimer() {
   }
 }
 
+/**
+ * Resetea y libera todas las variables de control y animaciones del ciclo de juego.
+ */
 function resetGameState() {
   clearDiceTimer();
   clearCountdown();
@@ -717,13 +741,17 @@ function resetGameState() {
   hideDiceOverlay();
 }
 
+/**
+ * Inicia una cuenta atrás animada con indicador circular antes del lanzamiento del turno.
+ * @param {number} seconds - Duración del temporizador.
+ * @param {string} initialMessage - Mensaje a plasmar en pantalla.
+ */
 function startCountdown(seconds, initialMessage) {
   clearCountdown();
   let remaining = seconds;
   rollDiceButton.disabled = true;
   renderDiceFace(null);
   
-  // HTML estructurado para el mensaje y el círculo de carga
   const loadingHTML = `
     <div>${formatColorNames(initialMessage)}</div>
     <div class="loader-container">
@@ -731,25 +759,24 @@ function startCountdown(seconds, initialMessage) {
     </div>
   `;
   
-  // Mostramos el mensaje inicial con el spinner
   renderDiceDialog(loadingHTML);
   showDiceOverlay();
 
   countdownTimer = setInterval(() => {
     remaining -= 1;
     if (remaining > 0) {
-      // Mantenemos el spinner visible durante los segundos que dure la cuenta
       renderDiceDialog(loadingHTML);
       return;
     }
     clearCountdown();
-    
-    // Al terminar el tiempo, quitamos el spinner y pedimos lanzar el dado
     renderDiceDialog('Pulsa "Lanzar dado"', [], true);
     rollDiceButton.disabled = false;
   }, 1000);
 }
 
+/**
+ * Cierra la ventana del navegador (si está autorizado por las directivas de la pestaña).
+ */
 function closeApp() {
   window.close();
 }
@@ -762,40 +789,48 @@ function returnToWelcomeScreen() {
   showScreen('welcome');
 }
 
+/**
+ * Configura los datos básicos e inicializa la partida de juego.
+ */
 function startGame() {
   if (currentScreen !== 'selection') {
     return;
   }
 
   buildPlayers();
+  // Elige un jugador inicial de forma aleatoria
   currentPlayerIndex = Math.floor(Math.random() * players.length);
   const current = players[currentPlayerIndex];
 
   resetGameState();
   showScreen('game');
   const welcomeMsg = `Empieza ${current.name}. Preparando primera tirada...`;
-  //statusPanel.textContent = welcomeMsg;
-  startCountdown(3, welcomeMsg); // Pasamos el mensaje al countdown
+  startCountdown(3, welcomeMsg);
   renderAll();
 }
 
+// Configuración de la escucha para ajustar el tiempo del dado dinámicamente
 if (diceDurationSlider && diceDurationValue) {
   diceDurationSlider.addEventListener('input', (e) => {
     const seconds = e.target.value;
-    // 1. Actualiza el texto en el HTML (ej: "Tiempo de tirada de dado: 4s")
     diceDurationValue.textContent = seconds;
-    
-    // 2. Multiplica por 1000 porque JavaScript gestiona el tiempo en milisegundos (4s = 4000ms)
     rollDuration = seconds * 1000;
   });
 }
 
+/**
+ * Dibuja de manera integral todos los componentes visuales del tablero.
+ */
 function renderAll() {
   renderBoardMarkers();
   renderHomeAreas();
   renderBoardPieces();
 }
 
+/**
+ * Crea un mapa con la cantidad de fichas situadas sobre la pista exterior común.
+ * @returns {Map} Un mapa estructurado [casilla => [{player, piece}]].
+ */
 function getTrackOccupants() {
   const map = new Map();
   players.forEach((player) => {
@@ -821,48 +856,47 @@ function hasOpponentOnTrack(position, player) {
   return occupants.find((entry) => entry.player !== player) || null;
 }
 
+/**
+ * Calcula el destino de una ficha al avanzar por la pista circular.
+ * @param {number} position - Posición de origen de la ficha.
+ * @param {number} dice - Pasos a avanzar según el dado.
+ * @param {Object} player - Jugador propietario.
+ * @returns {Object|null} Devuelve el nuevo estado/posición de la ficha o null si el movimiento es inviable.
+ */
 function getTrackTarget(position, dice, player) {
-  // 1. Calculamos cuántos pasos le quedan a la ficha desde su 'position' actual
-  // hasta alcanzar su casilla de entrada ('player.entranceIndex').
   let distanceToEntrance = 0;
   
   if (position <= player.entranceIndex) {
-    // Caso simple: la ficha aún no ha cruzado el índice 0 del tablero
     distanceToEntrance = player.entranceIndex - position;
   } else {
-    // Caso de vuelta completa: la ficha ya pasó el índice de su entrada en la vuelta anterior
-    // y está completando el circuito (por ejemplo, posición 65 y entrada en 3)
     distanceToEntrance = (trackLength - position) + player.entranceIndex;
   }
 
-  // 2. Si el dado saca exactamente lo necesario para pisar la entrada + 1 paso más,
-  // la ficha entra en la primera casilla del carril de meta (lanePosition = 1).
   if (dice === distanceToEntrance + 1) {
     return { status: 'lane', lanePosition: 1 };
   }
 
-  // 3. Si el dado saca más pasos de los necesarios para llegar a la entrada + 1,
-  // significa que se adentra aún más en el carril de color (por ejemplo, carril 2, 3, etc.)
   if (dice > distanceToEntrance + 1) {
     const stepsIntoLane = dice - (distanceToEntrance + 1);
     
-    // Validamos que no se pase del tamaño del carril (homeLaneLength es 8)
-    // Si llega a 9 (homeLaneLength + 1), significa que entra directo a 'finished'
     if (stepsIntoLane === homeLaneLength + 1) {
       return { status: 'finished', lanePosition: stepsIntoLane };
     }
     if (stepsIntoLane > homeLaneLength + 1) {
-      return null; // Movimiento inválido, se pasa de la meta
+      return null; // Se excede del final del carril
     }
     
     return { status: 'lane', lanePosition: stepsIntoLane };
   }
 
-  // 4. Si el dado es menor o igual a la distancia hasta la entrada,
-  // la ficha simplemente avanza de forma normal por la pista general.
   return { status: 'track', position: (position + dice) % trackLength };
 }
 
+/**
+ * Obtiene el destino en el carril final.
+ * @param {Object} piece - Ficha a evaluar.
+ * @param {number} dice - Pasos del dado.
+ */
 function getLaneTarget(piece, dice) {
   const targetLane = piece.lanePosition + dice;
   if (targetLane === homeLaneLength + 1) {
@@ -877,28 +911,22 @@ function getLaneTarget(piece, dice) {
   };
 }
 
+/**
+ * Comprueba si el destino está bloqueado por barreras formadas por el propio jugador.
+ */
 function isOwnBlockingTarget(player, target, piece) {
   if (target.status === 'track') {
     const occupants = getTrackOccupants().get(target.position) || [];
     
-    // 1. Si la casilla destino es tu propia salida
     if (target.position === player.startIndex) {
       return occupants.length >= 2;
     }
     
-    // 2. Si es una casilla segura (pero no tu salida)
     if (isSafeSquare(target.position)) {
-      // En casillas seguras pueden cooperar dos fichas cualesquiera.
-      // Bloquea solo si ya está al máximo de su capacidad (2 fichas).
       return occupants.length >= 2;
     }
     
-    // 3. Casillas normales (no seguras)
-    // Cuentas cuántas fichas tuyas ya hay en esa casilla.
     const myOccupantsCount = occupants.filter((entry) => entry.player === player).length;
-    
-    // Bloquea si YA tienes 2 fichas allí (el puente ya está completo).
-    // Si tienes 1, te dejará mover la segunda para formar el puente.
     return myOccupantsCount >= 2;
   }
 
@@ -908,70 +936,59 @@ function isOwnBlockingTarget(player, target, piece) {
     );
   }
 
-  if (target.status === 'finished') {
-    return false;
-  }
-
   return false;
 }
 
+/**
+ * Comprueba si el camino intermedio de una ficha está obstruido por una barrera (2 fichas en la misma casilla).
+ */
 function isPathBlocked(fromPosition, steps, player, isLane = false) {
-  // Si nos movemos por el carril final (lane)
   if (isLane) {
-    // Revisamos las casillas intermedias del carril
     for (let i = 1; i < steps; i++) {
       const checkLanePos = fromPosition + i;
       const laneOccupants = player.pieces.filter(
         (p) => p.status === 'lane' && p.lanePosition === checkLanePos
       ).length;
       
-      // En el carril, si hay otra ficha propia en una posición intermedia, ¿bloquea?
-      // Nota: Según reglas oficiales, en el carril de meta no se suelen permitir puentes,
-      // pero si en tu lógica se pueden juntar, lo ideal es comprobar si ya hay una ficha estorbando.
       if (laneOccupants >= 1) {
-        return true; // Camino bloqueado en el carril
+        return true;
       }
     }
     return false;
   }
 
-  // Si nos movemos por la pista principal (track)
   let currentPos = fromPosition;
   for (let i = 1; i <= steps; i++) {
-    // Avanzamos una casilla
     currentPos = (currentPos + 1) % trackLength;
 
-    // Si es la última casilla (el destino final), no la evaluamos aquí como "bloqueo de camino".
-    // Eso ya lo controla la función isOwnBlockingTarget que modificamos antes.
     if (i === steps) break;
 
-    // Si en el siguiente paso la ficha tendría que meterse al carril de color
     if (currentPos === player.entranceIndex) {
-      // Calculamos cuántos pasos le quedan por dar, restando los que ya dio en la pista
       const remainingSteps = steps - i;
-      // Si le quedaban pasos, el siguiente paso (remainingSteps) ya es entrar al carril (posición 0 del carril)
       return isPathBlocked(0, remainingSteps, player, true);
     }
 
-    // Comprobamos cuántas fichas totales hay en esta casilla intermedia de la pista
     const occupants = getTrackOccupants().get(currentPos) || [];
     if (occupants.length >= 2) {
-      return true; // ¡HAY UN PUENTE! El camino está bloqueado.
+      return true; // Hay un puente en el camino intermedio
     }
   }
 
   return false;
 }
 
+/**
+ * Construye la lista de movimientos legales para el jugador dado su tirada de dado.
+ */
 function getAvailableMoves(player, dice) {
   const moves = [];
   const homePieces = player.pieces.filter((piece) => piece.status === 'home');
 
+  // Regla del Parchís: Si sacas un 5 y tienes fichas en casa, estás obligado a sacar ficha si tu salida está libre
   if (dice === 5 && homePieces.length > 0) {
     homePieces.forEach((piece) => {
       const target = { status: 'track', position: player.startIndex };
       if (!isOwnBlockingTarget(player, target, piece)) {
-        // Al salir de casa no hay casillas intermedias, así que no requiere verificar camino saltado
         const isExitSquare = target.position === player.startIndex;
         const capture = (!isSafeSquare(target.position) || isExitSquare) && Boolean(hasOpponentOnTrack(target.position, player));
         moves.push({ type: 'exit', piece, to: target, capture });
@@ -981,7 +998,6 @@ function getAvailableMoves(player, dice) {
 
   player.pieces.forEach((piece) => {
     if (piece.status === 'track') {
-      // 1. Verificamos primero si hay un puente en el camino intermedio
       if (!isPathBlocked(piece.position, dice, player, false)) {
         const target = getTrackTarget(piece.position, dice, player);
         if (target && !isOwnBlockingTarget(player, target, piece)) {
@@ -992,7 +1008,6 @@ function getAvailableMoves(player, dice) {
     }
 
     if (piece.status === 'lane') {
-      // 2. Verificamos si hay bloqueos intermedios en el carril
       if (!isPathBlocked(piece.lanePosition, dice, player, true)) {
         const target = getLaneTarget(piece, dice);
         if (target && !isOwnBlockingTarget(player, target, piece)) {
@@ -1065,6 +1080,9 @@ function renderDiceOptions(options, message, callback) {
   renderDiceDialog(message, buttons, false);
 }
 
+/**
+ * Procesa la captura de una ficha enemiga, devolviéndola al nido del color correspondiente.
+ */
 function captureAtTarget(target, player) {
   if (isSafeSquare(target.position)) {
     return false;
@@ -1074,23 +1092,29 @@ function captureAtTarget(target, player) {
     return false;
   }
 
-  // 1. Guardamos el color y el ID antes de reiniciar su estado en la lógica
   const capturedColor = occupant.player.color;
   const capturedId = occupant.piece.id;
 
+  // 1. Actualizamos el estado lógico en memoria
   occupant.piece.status = 'home';
   occupant.piece.position = null;
   occupant.piece.lanePosition = 0;
 
-  // 2. Buscamos el elemento HTML de la ficha afectada para moverlo progresivamente
+  // 2. Buscamos el token en el DOM y le aplicamos la animación deslizante pura
   const pieceElements = document.querySelectorAll('.piece-token');
   pieceElements.forEach((el) => {
     if (el.dataset.pieceId == capturedId && el.classList.contains(capturedColor)) {
       const homeCoords = homePositions[capturedColor][capturedId - 1];
       if (homeCoords) {
-        // Le aplicamos las coordenadas de casa directamente al estilo inline
-        el.style.left = homeCoords.left;
-        el.style.top = homeCoords.top;
+        // Aseguramos que se sitúe por encima de las demás fichas durante el viaje
+        el.style.zIndex = '9999';
+        el.style.transition = 'left 5s ease-out, top 5s ease-out';
+        
+        // El uso de requestAnimationFrame obliga al navegador a procesar el deslizamiento visual de 5s
+        requestAnimationFrame(() => {
+          el.style.left = homeCoords.left;
+          el.style.top = homeCoords.top;
+        });
       }
     }
   });
@@ -1098,6 +1122,9 @@ function captureAtTarget(target, player) {
   return true;
 }
 
+/**
+ * Aplica el cambio lógico de estado y posición de una ficha en el juego.
+ */
 function applyMove(option) {
   const player = players[currentPlayerIndex];
   const piece = option.piece;
@@ -1111,21 +1138,18 @@ function applyMove(option) {
 
   if (captured) {
     player.pendingCaptureBonus = true;
-  }
-
-  if (destination.status === 'finished') {
-    player.pendingFinishBonus = true;
-  }
-
-  if (captured) {
+    // Detenemos cualquier renderizado automático durante 5.2 segundos para no romper la transición CSS
     setTimeout(() => {
       renderAll();
-    }, 800);
+    }, 5200);
   } else {
     renderAll();
   }
 }
 
+/**
+ * Concluye el turno del jugador activo y avanza de forma cíclica al siguiente.
+ */
 function finishTurn() {
   const winner = getGameWinner();
   if (winner) {
@@ -1137,11 +1161,11 @@ function finishTurn() {
   current.consecutiveSixes = 0;
   current.pendingCaptureBonus = false;
   current.pendingFinishBonus = false;
+  
   currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
   const next = players[currentPlayerIndex];
   currentRoll = null;
   
-  // CAMBIO AQUÍ: Forzamos la visualización del overlay al cambiar de turno
   showDiceOverlay(); 
   renderDiceDialog(`Turno de ${next.name}. Pulsa "Lanzar dado".`, [], true);
   
@@ -1150,19 +1174,46 @@ function finishTurn() {
   renderAll();
 }
 
+/**
+ * Gestiona los bonus extraordinarios tras un movimiento (captura = +20, meta = +10, repetir por 6).
+ */
 function handlePostMove() {
   const current = players[currentPlayerIndex];
 
   if (current.pendingCaptureBonus) {
     const bonusMoves = getBonusMoves(current, 20);
     if (bonusMoves.length > 0) {
-      setPendingMoveOptions(bonusMoves, (option) => {
-        current.pendingCaptureBonus = false;
-        applyMove(option);
-        handlePostMove();
-      }, 'Has capturado una ficha. Elige otra ficha para avanzar 20 casillas:');
+      // 1. Mostramos el diálogo de forma persistente en el overlay con un botón para avanzar
+      renderDiceDialog(
+        '¡Has capturado una ficha! Cuentate 20.', 
+        [
+          { 
+            label: 'Elegir Ficha +20', 
+            onClick: () => {
+              // 2. Al hacer clic, activamos las fichas parpadeantes en el tablero
+              setPendingMoveOptions(
+                bonusMoves, 
+                (option) => {
+                  current.pendingCaptureBonus = false;
+                  applyMove(option);
+                  setTimeout(() => {
+                  handlePostMove();
+                  }, 1000);
+                }, 
+                'Elige una ficha para avanzar 20 casillas:'
+              );
+              // Forzamos el cierre del overlay para ir al tablero
+              setDiceOverlayVisibility(false);
+            } 
+          }
+        ], 
+        false
+      );
+      showDiceOverlay();
       return;
     }
+
+
     current.pendingCaptureBonus = false;
     renderDiceDialog(`${current.name} ha capturado una ficha, pero no tiene otra ficha válida para avanzar 20 casillas.`, [
       { label: 'Continuar', onClick: () => { hideDiceOverlay(); finishTurn(); } }
@@ -1189,8 +1240,8 @@ function handlePostMove() {
     return;
   }
 
+  // Regla del Parchís: Si se saca un 6, el jugador repite tirada
   if (currentRoll === 6 && current.consecutiveSixes < 3) {
-    //statusPanel.textContent = `${current.name} sacó un 6 y puede tirar otra vez.`;
     rollDiceButton.disabled = false;
     renderDiceFace(currentRoll);
     renderDiceDialog(`Turno de ${current.name}. Puedes tirar otra vez con 6.`, [], true);
@@ -1201,6 +1252,9 @@ function handlePostMove() {
   finishTurn();
 }
 
+/**
+ * Ejecuta el movimiento seleccionado de la ficha en el tablero.
+ */
 function performMove(option) {
   if (currentScreen !== 'game') {
     return;
@@ -1208,31 +1262,47 @@ function performMove(option) {
 
   const current = players[currentPlayerIndex];
 
-  // Comprobamos si el movimiento que se va a realizar proviene de un bonus de captura activo
+  // Si proviene de un bonus de captura previo (+20)
   if (current.pendingCaptureBonus) {
-    // Desactivamos el overlay y quitamos la interacción para que no se pulse nada más
     clearPendingMoveSelection();
     hideDiceOverlay();
     
-    // Quitamos los estilos de parpadeo/clicables temporalmente de las fichas del tablero
     const tokens = document.querySelectorAll('.piece-token');
     tokens.forEach(t => t.classList.remove('clickable'));
 
-    statusPanel.textContent = `Ficha seleccionada. Contando las 20 casillas en 3 segundos...`;
-
-    // Añadimos el retraso de 3000 milisegundos (3 segundos)
     setTimeout(() => {
       executeMoveSteps(option);
     }, 3000);
   } else {
-    // Si es un movimiento normal (por dado o bonus de 10), se ejecuta al instante como antes
-    clearPendingMoveSelection();
-    hideDiceOverlay();
-    executeMoveSteps(option);
+    // EVALUAMOS SI ESTE MOVIMIENTO PROVOCARÁ UNA CAPTURA
+    const willCapture = option.to && option.to.status === 'track' && option.capture;
+
+    if (willCapture) {
+      // 1. Limpiamos las fichas parpadeantes para que el usuario no pueda hacer clicks raros
+      clearPendingMoveSelection();
+      
+      // 2. Bloqueamos la interfaz abriendo el overlay del dado con un mensaje limpio
+      //renderDiceDialog('¡Captura! La ficha regresa a su casa...', [], false);
+      //showDiceOverlay();
+
+      // 3. Ejecutamos el movimiento que dispara el deslizamiento de 5 segundos
+      applyMove(option);
+
+      // 4. Pausamos el flujo del juego 5.5 segundos antes de dar el bonus de 20 casillas
+      clearMoveDelayTimer();
+      moveDelayTimer = setTimeout(() => {
+        moveDelayTimer = null;
+        handlePostMove();
+      }, 5500);
+    } else {
+      // Movimiento normal libre de capturas
+      clearPendingMoveSelection();
+      hideDiceOverlay();
+      executeMoveSteps(option);
+    }
   }
 }
 
-// Creamos esta función auxiliar para albergar el resto de la lógica original de tu performMove
 function executeMoveSteps(option) {
   applyMove(option);
   renderAll();
@@ -1250,6 +1320,9 @@ function executeMoveSteps(option) {
   }, 2000);
 }
 
+/**
+ * Devuelve la ficha seleccionada a casa cuando el jugador saca tres 6 consecutivos de forma instantánea.
+ */
 function chooseReturnHome(piece) {
   if (currentScreen !== 'game') {
     return;
@@ -1265,6 +1338,9 @@ function chooseReturnHome(piece) {
   finishTurn();
 }
 
+/**
+ * Simula el rodaje del dado en un intervalo de tiempo rápido y aplica el resultado de la tirada.
+ */
 function rollDice() {
   if (currentScreen !== 'game' || rollDiceButton.disabled) {
     return;
@@ -1272,12 +1348,15 @@ function rollDice() {
 
   rollDiceButton.disabled = true;
   renderDiceFace(null);
-  renderDiceDialog('Lanzando...', [], false);
+
+  
+      // SOLUCIÓN: Dejamos el diálogo sin texto para que no muestre "Resultado:", pero mantenemos el dado visible
+      renderDiceDialog('', [], false); 
+      diceResult.classList.add('hidden'); // Ocultamos explícitamente el contenedor del texto
 
   const start = Date.now();
   
   diceTimer = setInterval(() => {
-    // La animación visual sigue mostrando caras rápidas al azar
     const randomVisualFace = Math.floor(Math.random() * 6) + 1;
     renderDiceFace(randomVisualFace);
     
@@ -1287,44 +1366,41 @@ function rollDice() {
       
       let finalFace;
       
-      // Verificamos si la secuencia del archivo tiene números cargados
       if (debugDiceSequence && debugDiceSequence.length > 0) {
         finalFace = debugDiceSequence[debugDiceIndex];
-        
-        console.log(`[DEBUG] Leyendo índice [${debugDiceIndex}] del archivo. Valor encontrado: ${finalFace}`);
-        
-        // Avanzamos al siguiente número. Si llega al final, vuelve a empezar (0)
+        console.log(`[DEBUG] Leyendo índice [${debugDiceIndex}] de tiradas.txt: ${finalFace}`);
         debugDiceIndex = (debugDiceIndex + 1) % debugDiceSequence.length;
       } else {
-        // Si el archivo falló o está vacío, usa el Math.random original
         finalFace = Math.floor(Math.random() * 6) + 1;
-        console.log(`[ALERTA] Archivo vacío. Usando dado normal: ${finalFace}`);
+        console.log(`[JUEGO] Dado aleatorio: ${finalFace}`);
       }
 
-      // Aseguramos que sea un número entero válido por seguridad
       finalFace = parseInt(finalFace, 10);
       if (isNaN(finalFace) || finalFace < 1 || finalFace > 6) {
-        finalFace = 1; // Rescate en caso de número corrupto en el .txt
-        console.error("[ERROR] El número extraído del archivo no es del 1 al 6. Forzado a 1.");
+        finalFace = 1;
+        console.error("[ERROR] El número extraído no es del 1 al 6. Forzando a 1.");
       }
       
       currentRoll = finalFace;
       renderDiceFace(finalFace);
-      
-      // Mostramos el resultado final
-      diceResult.textContent = `Resultado: ${finalFace}`;
-      diceResult.classList.remove('hidden');
+
+      // SOLUCIÓN: Dejamos el diálogo sin texto para que no muestre "Resultado:", pero mantenemos el dado visible
+      renderDiceDialog('', [], false); 
+      diceResult.classList.add('hidden'); // Ocultamos explícitamente el contenedor del texto
 
       clearResultDelayTimer();
       resultDelayTimer = setTimeout(() => {
         resultDelayTimer = null;
-        // Ejecutamos la lógica de mover fichas pasándole el número correcto
         processDiceResult(finalFace);
       }, 1000);
     }
   }, 120);
 }
 
+/**
+ * Gestiona la tirada final del dado y determina las penalizaciones, bloqueos u opciones disponibles de movimiento.
+ * @param {number} face - El valor de la tirada del dado.
+ */
 function processDiceResult(face) {
   if (currentScreen !== 'game') {
     return;
@@ -1337,17 +1413,35 @@ function processDiceResult(face) {
     current.consecutiveSixes = 0;
   }
 
+ // Regla de los tres seises consecutivos: la ficha activa más avanzada vuelve a casa
   if (current.consecutiveSixes === 3) {
-    const options = getReturnHomeOptions(current);
-    if (options.length > 0) {
-      setPendingMoveOptions(options.map((piece) => ({ type: 'return', piece, to: null })), (option) => {
-        chooseReturnHome(option.piece);
-      }, 'Has sacado tres 6s. Elige una ficha para devolverla a casa:');
-      return;
-    }
-    statusPanel.textContent = `${current.name} ha sacado tres 6s pero no hay fichas para devolver. Fin del turno.`;
-    hideDiceOverlay();
-    finishTurn();
+    // 1. Aseguramos que el dado pinte visualmente el tercer 6
+    renderDiceFace(6);
+    
+    // 2. Pintamos tu mensaje original en el diálogo y forzamos a que el overlay sea visible
+    renderDiceDialog('Demasiada suerte, has sacado tres 6s. Elige una ficha para devolverla a casa:', [], false);
+    showDiceOverlay();
+
+    // 3. Congelamos la pantalla 1 segundo antes de pasar al modo selección en el tablero
+    setTimeout(() => {
+      const options = getReturnHomeOptions(current);
+      if (options.length > 0) {
+        // Al llamarse aquí, ahora sí pasará limpiamente al tablero ocultando el dado
+        setPendingMoveOptions(
+          options.map((piece) => ({ type: 'return', piece, to: null })), 
+          (option) => {
+            chooseReturnHome(option.piece);
+          }, 
+          'Has sacado tres 6s. Elige una ficha para devolverla a casa:'
+        );
+      } else {
+        // Copia de seguridad por si el jugador no tuviera fichas fuera de casa
+        statusPanel.textContent = `${current.name} ha sacado tres 6s pero no hay fichas en el tablero para devolver. Fin del turno.`;
+        hideDiceOverlay();
+        finishTurn();
+      }
+    }, 3000); // 1000 milisegundos de espera
+    
     return;
   }
 
@@ -1355,7 +1449,6 @@ function processDiceResult(face) {
   if (moves.length === 0) {
     if (face === 6) {
       renderDiceDialog(`${current.name} no tiene movimientos con 6, pero puede tirar otra vez.`, [], true);
-      //statusPanel.textContent = `${current.name} sigue con 6.`;
       rollDiceButton.disabled = false;
       return;
     }
@@ -1364,14 +1457,12 @@ function processDiceResult(face) {
         { label: 'Pasar Turno', onClick: () => { hideDiceOverlay(); finishTurn(); } }
       ], false);
       showDiceOverlay();
-      finishTurn();
       return;
     }
-      renderDiceDialog(`${current.name} no tiene movimientos posibles con el número ${face}.`, [
+    renderDiceDialog(`${current.name} no tiene movimientos posibles con el número ${face}.`, [
       { label: 'Pasar Turno', onClick: () => { hideDiceOverlay(); finishTurn(); } }
-      ], false);
+    ], false);
     showDiceOverlay();
-    finishTurn();
     return;
   }
 
@@ -1382,39 +1473,42 @@ function processDiceResult(face) {
   );
 }
 
+/**
+ * Carga el archivo de tiradas preestablecidas para testing (tiradas.txt).
+ */
 async function loadDebugTiradas() {
   try {
-    // Añadimos un parámetro random para evitar que el navegador guarde en caché el archivo viejo si lo modificas
     const response = await fetch('tiradas.txt?v=' + Math.random());
     if (!response.ok) throw new Error(`Estado HTTP: ${response.status}`);
     
     const text = await response.text();
     console.log("📄 Contenido crudo leído de tiradas.txt:", text);
 
-    // Dividimos por comas, limpiamos espacios y nos aseguramos de que sean Números puros
     debugDiceSequence = text.split(',')
                             .map(num => num.trim())
                             .filter(num => num !== "")
-                            .map(num => parseInt(num, 10))
+                            .map(num => parseInt(num, 30))
                             .filter(num => !isNaN(num) && num >= 1 && num <= 6);
     
     if (debugDiceSequence.length === 0) {
-      console.error("❌ El archivo tiradas.txt se leyó, pero no se encontraron números válidos del 1 al 6.");
+      console.warn("⚠️ El archivo tiradas.txt se leyó, pero no se encontraron números válidos del 1 al 6.");
     } else {
       console.log('🎲 SECUENCIA DEBUG CARGADA CON ÉXITO:', debugDiceSequence);
     }
   } catch (error) {
-    console.error('⚠️ Error crítico cargando tiradas.txt. Usando modo aleatorio.', error);
+    console.warn('⚠️ No se ha encontrado el archivo tiradas.txt o no ha sido posible leerlo. Se utilizará el modo de dado aleatorio estándar.', error);
   }
 }
 
-// Ejecutar al cargar la página
+// Carga inicial de datos de depuración
 loadDebugTiradas();
 
+// --- VINCULACIÓN DE EVENTOS EN LA INTERFAZ ---
 continueButton.addEventListener('click', openSelectionScreen);
 closeButton.addEventListener('click', closeApp);
 backButton.addEventListener('click', returnToWelcomeScreen);
 startButton.addEventListener('click', startGame);
 rollDiceButton.addEventListener('click', rollDice);
+
 setupInputHandlers();
 showScreen('welcome');
