@@ -1,6 +1,6 @@
 // --- CONFIGURACIÓN Y CONSTANTES DEL TABLERO ---
 const trackLength = 68; // Longitud total de la pista circular común
-const homeLaneLength = 8; // Número de casillas en el pasillo de meta (carril de color)
+const homeLaneLength = 7; // Número de casillas en el pasillo de meta (carril de color)
 // Índices de las casillas seguras del tablero circular (donde no se puede capturar)
 const safeTrackIndices = new Set([4, 11, 16, 21, 28, 33, 38, 45, 50, 55, 62, 67]);
 
@@ -26,7 +26,7 @@ const players = [
     homeId: 'homeRed',
     image: null,
     startIndex: 38,       // Casilla de salida al tablero común
-    entranceIndex: 33,     // Última casilla antes de desviarse al carril de meta rojo
+    entranceIndex: 35,     // Última casilla antes de desviarse al carril de meta rojo
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -39,7 +39,7 @@ const players = [
     homeId: 'homeGreen',
     image: null,
     startIndex: 55,       // Casilla de salida al tablero común
-    entranceIndex: 50,     // Última casilla antes de desviarse al carril de meta verde
+    entranceIndex: 52,     // Última casilla antes de desviarse al carril de meta verde
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -52,7 +52,7 @@ const players = [
     homeId: 'homeYellow',
     image: null,
     startIndex: 4,        // Casilla de salida al tablero común
-    entranceIndex: 67,     // Última casilla antes de desviarse al carril de meta amarillo
+    entranceIndex: 69,     // Última casilla antes de desviarse al carril de meta amarillo
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -65,7 +65,7 @@ const players = [
     homeId: 'homeBlue',
     image: null,
     startIndex: 21,       // Casilla de salida al tablero común
-    entranceIndex: 16,     // Última casilla antes de desviarse al carril de meta azul
+    entranceIndex: 18,     // Última casilla antes de desviarse al carril de meta azul
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -769,7 +769,7 @@ function startCountdown(seconds, initialMessage) {
       return;
     }
     clearCountdown();
-    renderDiceDialog('Pulsa "Lanzar dado"', [], true);
+    renderDiceDialog('', [], true);
     rollDiceButton.disabled = false;
   }, 1000);
 }
@@ -1167,7 +1167,7 @@ function finishTurn() {
   currentRoll = null;
   
   showDiceOverlay(); 
-  renderDiceDialog(`Turno de ${next.name}. Pulsa "Lanzar dado".`, [], true);
+  renderDiceDialog(`Turno de ${next.name}`, [], true);
   
   rollDiceButton.disabled = false;
   statusPanel.textContent = '';
@@ -1394,7 +1394,7 @@ function rollDice() {
         processDiceResult(finalFace);
       }, 1000);
     }
-  }, 120);
+  }, 180); // Valor en ms del tiempo que se muestra cada cara del dado en la animación.
 }
 
 /**
@@ -1448,7 +1448,7 @@ function processDiceResult(face) {
   const moves = getAvailableMoves(current, face);
   if (moves.length === 0) {
     if (face === 6) {
-      renderDiceDialog(`${current.name} no tiene movimientos con 6, pero puede tirar otra vez.`, [], true);
+      renderDiceDialog(`${current.name} no tiene movimientos posibles, pero puede tirar otra vez.`, [], true);
       rollDiceButton.disabled = false;
       return;
     }
@@ -1459,7 +1459,7 @@ function processDiceResult(face) {
       showDiceOverlay();
       return;
     }
-    renderDiceDialog(`${current.name} no tiene movimientos posibles con el número ${face}.`, [
+    renderDiceDialog(`${current.name} no tiene movimientos posibles`, [
       { label: 'Pasar Turno', onClick: () => { hideDiceOverlay(); finishTurn(); } }
     ], false);
     showDiceOverlay();
