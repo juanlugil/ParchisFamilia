@@ -20,7 +20,7 @@ function isSafeSquare(position) {
 // --- DEFINICIÓN DE LOS JUGADORES ---
 const players = [
   {
-    name: 'Rojo',
+    name: 'ROJO',
     color: 'red',
     inputId: 'imageRed',
     homeId: 'homeRed',
@@ -33,7 +33,7 @@ const players = [
     pendingFinishBonus: false,
   },
   {
-    name: 'Verde',
+    name: 'VERDE',
     color: 'green',
     inputId: 'imageGreen',
     homeId: 'homeGreen',
@@ -46,7 +46,7 @@ const players = [
     pendingFinishBonus: false,
   },
   {
-    name: 'Amarillo',
+    name: 'AMARILLO',
     color: 'yellow',
     inputId: 'imageYellow',
     homeId: 'homeYellow',
@@ -59,7 +59,7 @@ const players = [
     pendingFinishBonus: false,
   },
   {
-    name: 'Azul',
+    name: 'AZUL',
     color: 'blue',
     inputId: 'imageBlue',
     homeId: 'homeBlue',
@@ -471,7 +471,11 @@ function formatColorNames(text) {
     .replace(/\bRojo\b/g, '<span class="text-color-red">Rojo</span>')
     .replace(/\bVerde\b/g, '<span class="text-color-green">Verde</span>')
     .replace(/\bAmarillo\b/g, '<span class="text-color-yellow">Amarillo</span>')
-    .replace(/\bAzul\b/g, '<span class="text-color-blue">Azul</span>');
+    .replace(/\bAzul\b/g, '<span class="text-color-blue">Azul</span>')
+    .replace(/\bROJO\b/g, '<span class="text-color-red">ROJO</span>')
+    .replace(/\bVERDE\b/g, '<span class="text-color-green">VERDE</span>')
+    .replace(/\bAMARILLO\b/g, '<span class="text-color-yellow">AMARILLO</span>')
+    .replace(/\bAZUL\b/g, '<span class="text-color-blue">AZUL</span>');
 }
 
 /**
@@ -811,7 +815,7 @@ function startGame() {
 
   resetGameState();
   showScreen('game');
-  const welcomeMsg = `Empieza ${current.name}. Preparando primera tirada...`;
+  const welcomeMsg = `EMPIEZA EL JUGADOR  ${current.name}...`;
   startCountdown(5, welcomeMsg);
   renderAll();
 }
