@@ -812,7 +812,7 @@ function startGame() {
   resetGameState();
   showScreen('game');
   const welcomeMsg = `Empieza ${current.name}. Preparando primera tirada...`;
-  startCountdown(3, welcomeMsg);
+  startCountdown(5, welcomeMsg);
   renderAll();
 }
 

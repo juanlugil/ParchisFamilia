@@ -10,27 +10,32 @@
   <main class="app-shell">
     <section class="welcome-panel" id="welcomePanel">
       <div class="welcome-content">
-        <h1>Vamos a echar una partida al PARCHÍS</h1>
+        <!-- 🍿 Envoltura de marquesina con efecto blur -->
+        <div class="welcome-marquee">
+          <h1>Vamos a echar una partida al PARCHÍS</h1>
+        </div>
         <div class="welcome-actions">
-          <button id="continueButton" type="button" class="primary">CONTINUAR</button>
           <button id="closeButton" type="button" class="secondary">CERRAR</button>
+          <button id="continueButton" type="button" class="primary">CONTINUAR</button>
         </div>
       </div>
     </section>
 
     <section class="selection-panel hidden" id="selectionPanel">
-      <h2>Selecciona las imágenes de los jugadores</h2>
+      <div class="selection-marquee">
+      <h2>ESCOGE UNA IMAGEN PARA CADA JUGADOR</h2>
+      
       <div class="inputs-grid">
-        <label class="file-label" for="imageRed">Jugador Rojo</label>
+        <label class="file-label" for="imageRed">Jugador<div class="text-color-red">Rojo</div></label>
         <input id="imageRed" type="file" accept="image/*" />
-        <label class="file-label" for="imageGreen">Jugador Verde</label>
+        <label class="file-label" for="imageGreen">Jugador<div class="text-color-green">Verde</div></label>
         <input id="imageGreen" type="file" accept="image/*" />
-        <label class="file-label" for="imageYellow">Jugador Amarillo</label>
+        <label class="file-label" for="imageYellow">Jugador<div class="text-color-yellow">Amarillo</div></label>
         <input id="imageYellow" type="file" accept="image/*" />
-        <label class="file-label" for="imageBlue">Jugador Azul</label>
+        <label class="file-label" for="imageBlue">Jugador<div class="text-color-blue">Azul</div></label>
         <input id="imageBlue" type="file" accept="image/*" />
+      
       </div>
-
       <div class="dice-duration-setting" style="margin-top: 24px; text-align: center; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto;">
         <label for="diceDurationSlider" style="display: block; font-weight: bold; margin-bottom: 12px;">
           Tiempo de tirada de dado: <span id="diceDurationValue">3</span>s
@@ -47,8 +52,10 @@
             style="flex-grow: 1; cursor: pointer;"
           >
           <span>5</span>
+          </div>
         </div>
       </div>
+    </div>
       <div class="selection-actions">
         <button id="backButton" type="button" class="secondary">VOLVER</button>
         <button id="startButton" type="button" class="primary">INICIAR PARTIDA</button>
