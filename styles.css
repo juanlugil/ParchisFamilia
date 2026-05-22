@@ -100,7 +100,7 @@ body {
 .welcome-content,
 .selection-panel {
   width: min(760px, 100%);
-  text-align: center;[cite: 3]
+  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -124,7 +124,7 @@ body {
   margin: 0 0 24px 0; /* Espaciado debajo del título */
   font-size: clamp(1.8rem, 3.5vw, 2.8rem);
   letter-spacing: 0.02em;
-  color: white;[cite: 3]
+  color: white;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 .welcome-actions,
