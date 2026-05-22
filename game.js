@@ -485,10 +485,10 @@ function getPieceCoordinates(piece, player) {
     return homePositions[player.color][piece.id - 1];
   }
   if (piece.status === 'track') {
-    return trackPositions[piece.position-1];
+    return trackPositions[piece.position-1] || null; // 🟢 CONTROL DE SEGURIDAD: Retorna null si la posición es inválida para evitar errores de renderizado
   }
   if (piece.status === 'lane') {
-    return lanePositions[player.color][piece.lanePosition - 1];
+    return lanePositions[player.color][piece.lanePosition - 1] || null; // 🟢 CONTROL DE SEGURIDAD: Retorna null si la posición es inválida para evitar errores de renderizado
   }
   return finishPositions[player.color];
 }
@@ -582,6 +582,12 @@ function renderBoardPieces() {
     player.pieces.forEach((piece) => {
       const coords = getPieceCoordinates(piece, player);
       
+      // 🟢 CONTROL DE SEGURIDAD INTERNO: Si la coordenada no existe, saltamos la ficha para que no rompa el juego
+      if (!coords) {
+        console.warn(`⚠️ Posición inválida para la ficha ${piece.id} del jugador ${player.name}. Saltando renderizado.`);
+        return; 
+      }
+
       let key = '';
       if (piece.status === 'home') key = `home-${player.color}-${piece.id}`;
       else if (piece.status === 'track') key = `track-${piece.position}`;
@@ -912,7 +918,7 @@ function getLaneTarget(piece, dice) {
   if (targetLane === homeLaneLength) {
     return { status: 'finished', lanePosition: targetLane };
   }
-  if (targetLane > homeLaneLength + 1) {
+  if (targetLane > homeLaneLength) {
     return null;
   }
   return {
@@ -1294,12 +1300,13 @@ function handlePostMove() {
     return; 
   }
 
-  if (current.pendingFinishBonus) {
+if (current.pendingFinishBonus) {
+    // 1. Calculamos las opciones teóricas de mover 10 pasos con las fichas restantes
     const bonusMoves = getBonusMoves(current, 10);
     
-    // 🟢 SEGURIDAD: Comprobamos si realmente el jugador tiene fichas que puedan moverse esos 10 pasos.
-    // Si todas se pasan de la meta, getAvailableMoves filtrará los 'null' y devolverá un array vacío.
-    const validOptions = bonusMoves.length > 0 ? getAvailableMoves(current, bonusMoves) : [];
+    // 🟢 CORRECCIÓN: Filtramos usando getAvailableMoves pasándole el número 10, no el array.
+    // Esto validará correctamente si el jugador tiene movimientos legales de 10 pasos sin pasarse.
+    const validOptions = getAvailableMoves(current, 10).filter(move => move.type === 'move');
 
     if (validOptions.length > 0) {
       renderDiceDialog(
@@ -1309,7 +1316,7 @@ function handlePostMove() {
             label: 'Elegir Ficha +10',
             onClick: () => {
               setPendingMoveOptions(
-                bonusMoves,
+                validOptions, // Usamos las opciones validadas que no devuelven null
                 (option) => {
                   current.pendingFinishBonus = false;
                   applyMove(option);
@@ -1329,9 +1336,9 @@ function handlePostMove() {
       return;
     }
     
-    // 🟢 SI NO HAY MOVIMIENTOS VÁLIDOS (porque las fichas se pasan de largo de la meta):
+    // 🟢 SI NO HAY MOVIMIENTOS VÁLIDOS (porque las fichas se pasan de largo de la meta o están bloqueadas):
     console.log(`⚠️ ${current.name} tiene un bonus de +10, pero ninguna ficha puede moverlo sin pasarse. Se pierde el bonus.`);
-    current.pendingFinishBonus = false; // Limpiamos el bonus de forma segura para que no se quede en bucle
+    current.pendingFinishBonus = false; // Limpiamos el bonus de forma segura para evitar bucles
     
     renderDiceDialog(`${current.name} ha llegado a la meta, pero no tiene ninguna ficha que pueda avanzar 10 casillas sin pasarse.`, [
       { 

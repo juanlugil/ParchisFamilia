@@ -20,23 +20,31 @@ body {
   padding: 0;
   min-height: 100vh;
   width: 100%;
+  background-color: #0f111a; /* Fondo sólido oscuro */
   
-  /* 🎨 Fondo con patrón diagonal de 4 colores con grosor medio */
+  /* 🏁 Patrón de franjas diagonales sólidas con fina separación blanca */
   background-image: repeating-linear-gradient(
     45deg,
-    #ff4d4d, /* Rojo */
-    #ff4d4d 20px,
-    #2ecc71 20px, /* Verde */
-    #2ecc71 40px,
-    #f1c40f 40px, /* Amarillo */
-    #f1c40f 60px,
-    #3498db 60px, /* Azul */
-    #3498db 80px
+    var(--red) 0px,
+    var(--red) 30px,
+    #ffffff 30px,
+    #ffffff 32px, /* Franja blanca fina (2px) */
+    var(--green) 32px,
+    var(--green) 62px,
+    #ffffff 62px,
+    #ffffff 64px, /* Franja blanca fina (2px) */
+    var(--yellow) 64px,
+    var(--yellow) 94px,
+    #ffffff 94px,
+    #ffffff 96px, /* Franja blanca fina (2px) */
+    var(--blue) 96px,
+    var(--blue) 126px,
+    #ffffff 126px,
+    #ffffff 128px /* Franja blanca fina (2px) */
   );
   
-  /* Asegura que el fondo cubra toda la pantalla si se hace scroll */
   background-attachment: fixed;
-  background-size: cover;
+  color: var(--text);
 }
 
 .app-shell {
@@ -124,6 +132,7 @@ button:active {
   backdrop-filter: blur(12px);
   pointer-events: auto;
   z-index: 1000;
+  border-radius: 24px;
 }
 
 .dice-overlay.selection-mode {
@@ -357,7 +366,7 @@ button:disabled {
   width: min(100%, 760px);
   aspect-ratio: 1;
   margin: 0 auto;
-  border-radius: 0;
+  border-radius: 24px;
   background: url('fondo.jpg') center/cover no-repeat;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.08);
