@@ -1,8 +1,8 @@
 // --- CONFIGURACIÓN Y CONSTANTES DEL TABLERO ---
 const trackLength = 68; // Longitud total de la pista circular común
-const homeLaneLength = 7; // Número de casillas en el pasillo de meta (carril de color)
+const homeLaneLength = 8; // Número de casillas en el pasillo de meta (carril de color)
 // Índices de las casillas seguras del tablero circular (donde no se puede capturar)
-const safeTrackIndices = new Set([4, 11, 16, 21, 28, 33, 38, 45, 50, 55, 62, 67]);
+const safeTrackIndices = new Set([5, 12, 17, 22, 29, 34, 39, 46, 51, 56, 63, 68]);
 
 // Elementos del DOM para la configuración de la velocidad del dado
 const diceDurationSlider = document.getElementById('diceDurationSlider');
@@ -25,8 +25,8 @@ const players = [
     inputId: 'imageRed',
     homeId: 'homeRed',
     image: null,
-    startIndex: 38,       // Casilla de salida al tablero común
-    entranceIndex: 35,     // Última casilla antes de desviarse al carril de meta rojo
+    startIndex: 39,       // Casilla de salida al tablero común
+    entranceIndex: 34,     // Última casilla antes de desviarse al carril de meta rojo
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -38,8 +38,8 @@ const players = [
     inputId: 'imageGreen',
     homeId: 'homeGreen',
     image: null,
-    startIndex: 55,       // Casilla de salida al tablero común
-    entranceIndex: 52,     // Última casilla antes de desviarse al carril de meta verde
+    startIndex: 56,       // Casilla de salida al tablero común
+    entranceIndex: 51,     // Última casilla antes de desviarse al carril de meta verde
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -51,8 +51,8 @@ const players = [
     inputId: 'imageYellow',
     homeId: 'homeYellow',
     image: null,
-    startIndex: 4,        // Casilla de salida al tablero común
-    entranceIndex: 69,     // Última casilla antes de desviarse al carril de meta amarillo
+    startIndex: 5,        // Casilla de salida al tablero común
+    entranceIndex: 68,     // Última casilla antes de desviarse al carril de meta amarillo
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -64,8 +64,8 @@ const players = [
     inputId: 'imageBlue',
     homeId: 'homeBlue',
     image: null,
-    startIndex: 21,       // Casilla de salida al tablero común
-    entranceIndex: 18,     // Última casilla antes de desviarse al carril de meta azul
+    startIndex: 22,       // Casilla de salida al tablero común
+    entranceIndex: 17,     // Última casilla antes de desviarse al carril de meta azul
     pieces: [],
     consecutiveSixes: 0,
     pendingCaptureBonus: false,
@@ -83,6 +83,7 @@ let pendingMoveOptions = [];
 let pendingMoveCallback = null;
 let currentRoll = null;
 let rollDuration = 3000; // Duración por defecto de la animación del dado en ms
+let contatiradas = 0;    // 🟢 NUEVA: Contador de tiradas para el primer jugador
 
 // --- VARIABLES PARA EL DEBUG DE TIRADAS (Cargadas desde archivo externo) ---
 let debugDiceSequence = []; // Lista de números predefinidos
@@ -484,7 +485,7 @@ function getPieceCoordinates(piece, player) {
     return homePositions[player.color][piece.id - 1];
   }
   if (piece.status === 'track') {
-    return trackPositions[piece.position];
+    return trackPositions[piece.position-1];
   }
   if (piece.status === 'lane') {
     return lanePositions[player.color][piece.lanePosition - 1];
@@ -863,33 +864,42 @@ function hasOpponentOnTrack(position, player) {
  * @param {Object} player - Jugador propietario.
  * @returns {Object|null} Devuelve el nuevo estado/posición de la ficha o null si el movimiento es inviable.
  */
+/**
+ * Calcula el destino de una ficha al avanzar paso a paso por el tablero.
+ */
 function getTrackTarget(position, dice, player) {
-  let distanceToEntrance = 0;
-  
-  if (position <= player.entranceIndex) {
-    distanceToEntrance = player.entranceIndex - position;
-  } else {
-    distanceToEntrance = (trackLength - position) + player.entranceIndex;
-  }
+  let currentPos = position;
+  let currentStatus = 'track';
+  let lanePosition = 0;
 
-  if (dice === distanceToEntrance + 1) {
-    return { status: 'lane', lanePosition: 1 };
-  }
-
-  if (dice > distanceToEntrance + 1) {
-    const stepsIntoLane = dice - (distanceToEntrance + 1);
-    
-    if (stepsIntoLane === homeLaneLength + 1) {
-      return { status: 'finished', lanePosition: stepsIntoLane };
+  for (let i = 1; i <= dice; i++) {
+    if (currentStatus === 'track') {
+      if (currentPos === player.entranceIndex) {
+        currentStatus = 'lane';
+        lanePosition = 1;
+      } else {
+        // Avanza de 1 en 1. Si supera 68, vuelve a la casilla 1
+        currentPos = currentPos + 1;
+        if (currentPos > trackLength) {
+          currentPos = 1;
+        }
+      }
+    } else if (currentStatus === 'lane') {
+      lanePosition++;
+      if (lanePosition > homeLaneLength + 1) {
+        return null; // Se pasa de la meta
+      }
     }
-    if (stepsIntoLane > homeLaneLength + 1) {
-      return null; // Se excede del final del carril
-    }
-    
-    return { status: 'lane', lanePosition: stepsIntoLane };
   }
 
-  return { status: 'track', position: (position + dice) % trackLength };
+  if (currentStatus === 'lane') {
+    if (lanePosition === homeLaneLength) {
+      return { status: 'finished', lanePosition: lanePosition };
+    }
+    return { status: 'lane', lanePosition: lanePosition };
+  }
+
+  return { status: 'track', position: currentPos };
 }
 
 /**
@@ -899,7 +909,7 @@ function getTrackTarget(position, dice, player) {
  */
 function getLaneTarget(piece, dice) {
   const targetLane = piece.lanePosition + dice;
-  if (targetLane === homeLaneLength + 1) {
+  if (targetLane === homeLaneLength) {
     return { status: 'finished', lanePosition: targetLane };
   }
   if (targetLane > homeLaneLength + 1) {
@@ -931,9 +941,9 @@ function isOwnBlockingTarget(player, target, piece) {
   }
 
   if (target.status === 'lane') {
-    return player.pieces.some((otherPiece) =>
-      otherPiece !== piece && otherPiece.status === target.status && otherPiece.lanePosition === target.lanePosition
-    );
+    // MODIFICADO: Eliminamos el bloqueo automático si hay fichas propias.
+    // El carril de llegada es privado y libre para acumular fichas del mismo jugador.
+    return false;
   }
 
   return false;
@@ -943,7 +953,7 @@ function isOwnBlockingTarget(player, target, piece) {
  * Comprueba si el camino intermedio de una ficha está obstruido por una barrera (2 fichas en la misma casilla).
  */
 function isPathBlocked(fromPosition, steps, player, isLane = false) {
-  if (isLane) {
+  if (isLane) {/*
     for (let i = 1; i < steps; i++) {
       const checkLanePos = fromPosition + i;
       const laneOccupants = player.pieces.filter(
@@ -953,13 +963,17 @@ function isPathBlocked(fromPosition, steps, player, isLane = false) {
       if (laneOccupants >= 1) {
         return true;
       }
-    }
+    }*/
     return false;
   }
 
   let currentPos = fromPosition;
   for (let i = 1; i <= steps; i++) {
-    currentPos = (currentPos + 1) % trackLength;
+    // Avanzar de forma circular en base 1-68
+    currentPos = currentPos + 1;
+    if (currentPos > trackLength) {
+      currentPos = 1;
+    }
 
     if (i === steps) break;
 
@@ -970,7 +984,7 @@ function isPathBlocked(fromPosition, steps, player, isLane = false) {
 
     const occupants = getTrackOccupants().get(currentPos) || [];
     if (occupants.length >= 2) {
-      return true; // Hay un puente en el camino intermedio
+      return true; // Hay un puente/barrera en el camino intermedio
     }
   }
 
@@ -1029,9 +1043,59 @@ function getGameWinner() {
 }
 
 function endGame(winner) {
-  rollDiceButton.disabled = true;
+  rollDiceButton.disabled = true; //
+  renderDiceFace(null); // Limpiamos la cara visual del dado
+
+  // Muestra el mensaje de victoria dentro del diálogo flotante unificado
+  renderDiceDialog(
+    `🏆 ¡Victoria para ${winner.name}! La partida ha terminado.`,
+    [
+      {
+        label: 'Nueva partida',
+        onClick: () => {
+          resetFullGame(); // Ejecuta el reinicio completo
+        }
+      }
+    ],
+    false
+  );
+  
+  // Forzamos a que el overlay se abra en primer plano
+  showDiceOverlay();
+}
+
+/**
+ * Limpia el estado de la partida actual y regresa al menú de Bienvenida.
+ */
+function resetFullGame() {
   hideDiceOverlay();
-  statusPanel.textContent = `¡Victoria para ${winner.name}! La partida ha terminado.`;
+
+  // 1. Restablecer variables globales de control de juego
+  currentPlayerIndex = 0;
+  currentRoll = null;
+  contatiradas = 0; // Reseteamos tu contador de tiradas
+
+  // 2. Devolver todas las fichas a sus nidos ('home') y limpiar bonus
+  players.forEach((player) => {
+    player.consecutiveSixes = 0;
+    player.pendingCaptureBonus = false;
+    player.pendingFinishBonus = false;
+    
+    player.pieces.forEach((piece) => {
+      piece.status = 'home';
+      piece.position = null;
+      piece.lanePosition = 0;
+    });
+  });
+
+  // 3. Limpiar cualquier texto residual del panel de estado
+  statusPanel.textContent = '';
+
+  // 4. Renderizar el tablero vacío
+  renderAll();
+
+  // 5. Utilizar tu función nativa de SPA para regresar a la pantalla de bienvenida
+  showScreen('welcome');
 }
 
 function getBonusMoves(player, steps) {
@@ -1040,6 +1104,7 @@ function getBonusMoves(player, steps) {
   player.pieces.forEach((piece) => {
     if (piece.status === 'track') {
       const target = getTrackTarget(piece.position, steps, player);
+      // 🟢 CORRECCIÓN: Validamos que target exista antes de comprobar bloqueos
       if (target && !isOwnBlockingTarget(player, target, piece)) {
         const capture = !isSafeSquare(target.position) && Boolean(hasOpponentOnTrack(target.position, player));
         moves.push({ type: 'bonus', piece, to: target, capture });
@@ -1048,6 +1113,7 @@ function getBonusMoves(player, steps) {
 
     if (piece.status === 'lane') {
       const target = getLaneTarget(piece, steps);
+      // 🟢 CORRECCIÓN: Validamos que target exista (que no devuelva null por pasarse)
       if (target && !isOwnBlockingTarget(player, target, piece)) {
         moves.push({ type: 'bonus', piece, to: target, capture: false });
       }
@@ -1134,6 +1200,12 @@ function applyMove(option) {
   piece.position = destination.status === 'track' ? destination.position : null;
   piece.lanePosition = destination.status === 'lane' || destination.status === 'finished' ? destination.lanePosition : 0;
 
+  // 🟢 NUEVO: Si la ficha ha llegado a la casilla final de meta, activamos el bonus de +10
+  if (destination.status === 'finished') {
+    player.pendingFinishBonus = true;
+    console.log(`🎉 ¡Ficha en meta! Se activa el bonus de +10 pasos para el jugador ${player.name}`);
+  }
+  
   const captured = destination.status === 'track' && option.capture && captureAtTarget(destination, player);
 
   if (captured) {
@@ -1224,17 +1296,51 @@ function handlePostMove() {
 
   if (current.pendingFinishBonus) {
     const bonusMoves = getBonusMoves(current, 10);
-    if (bonusMoves.length > 0) {
-      setPendingMoveOptions(bonusMoves, (option) => {
-        current.pendingFinishBonus = false;
-        applyMove(option);
-        handlePostMove();
-      }, 'Has llegado a la meta. Elige otra ficha para avanzar 10 casillas:');
+    
+    // 🟢 SEGURIDAD: Comprobamos si realmente el jugador tiene fichas que puedan moverse esos 10 pasos.
+    // Si todas se pasan de la meta, getAvailableMoves filtrará los 'null' y devolverá un array vacío.
+    const validOptions = bonusMoves.length > 0 ? getAvailableMoves(current, bonusMoves) : [];
+
+    if (validOptions.length > 0) {
+      renderDiceDialog(
+        '¡Has llegado a la meta! Cuentate 10.',
+        [
+          {
+            label: 'Elegir Ficha +10',
+            onClick: () => {
+              setPendingMoveOptions(
+                bonusMoves,
+                (option) => {
+                  current.pendingFinishBonus = false;
+                  applyMove(option);
+                  setTimeout(() => {
+                    handlePostMove();
+                  }, 1000);
+                },
+                'Has llegado a la meta. Elige otra ficha y cuenta 10 casillas:'
+              );
+              setDiceOverlayVisibility(false);
+            }
+          }
+        ],
+        false
+      );
+      showDiceOverlay();
       return;
     }
-    current.pendingFinishBonus = false;
-    renderDiceDialog(`${current.name} ha llegado a la meta, pero no hay otra ficha válida para avanzar 10 casillas.`, [
-      { label: 'Continuar', onClick: () => { hideDiceOverlay(); finishTurn(); } }
+    
+    // 🟢 SI NO HAY MOVIMIENTOS VÁLIDOS (porque las fichas se pasan de largo de la meta):
+    console.log(`⚠️ ${current.name} tiene un bonus de +10, pero ninguna ficha puede moverlo sin pasarse. Se pierde el bonus.`);
+    current.pendingFinishBonus = false; // Limpiamos el bonus de forma segura para que no se quede en bucle
+    
+    renderDiceDialog(`${current.name} ha llegado a la meta, pero no tiene ninguna ficha que pueda avanzar 10 casillas sin pasarse.`, [
+      { 
+        label: 'Continuar', 
+        onClick: () => { 
+          hideDiceOverlay(); 
+          finishTurn(); // Pasa el turno al siguiente jugador de forma totalmente limpia
+        } 
+      }
     ], false);
     showDiceOverlay();
     return;
@@ -1344,6 +1450,12 @@ function chooseReturnHome(piece) {
 function rollDice() {
   if (currentScreen !== 'game' || rollDiceButton.disabled) {
     return;
+  }
+
+  // 🟢 SI ES EL PRIMER JUGADOR, INCREMENTAMOS EL CONTADOR
+  if (currentPlayerIndex === 0) {
+    contatiradas++;
+    console.log(`🎲 [CONTADOR] El primer jugador inicia su tirada. Ronda/Tirada número: ${contatiradas}`);
   }
 
   rollDiceButton.disabled = true;
@@ -1487,7 +1599,7 @@ async function loadDebugTiradas() {
     debugDiceSequence = text.split(',')
                             .map(num => num.trim())
                             .filter(num => num !== "")
-                            .map(num => parseInt(num, 30))
+                            .map(num => parseInt(num, 10))
                             .filter(num => !isNaN(num) && num >= 1 && num <= 6);
     
     if (debugDiceSequence.length === 0) {

@@ -11,14 +11,32 @@
 
 * {
   box-sizing: border-box;
+  /* 🟢 Forzamos una fuente del sistema moderna, limpia y homogénea para toda la app */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 body {
   margin: 0;
+  padding: 0;
   min-height: 100vh;
-  font-family: Inter, system-ui, sans-serif;
-  background: radial-gradient(circle at top left, #343a6b 0%, #15181f 45%, #0f1220 100%);
-  color: var(--text);
+  width: 100%;
+  
+  /* 🎨 Fondo con patrón diagonal de 4 colores con grosor medio */
+  background-image: repeating-linear-gradient(
+    45deg,
+    #ff4d4d, /* Rojo */
+    #ff4d4d 20px,
+    #2ecc71 20px, /* Verde */
+    #2ecc71 40px,
+    #f1c40f 40px, /* Amarillo */
+    #f1c40f 60px,
+    #3498db 60px, /* Azul */
+    #3498db 80px
+  );
+  
+  /* Asegura que el fondo cubra toda la pantalla si se hace scroll */
+  background-attachment: fixed;
+  background-size: cover;
 }
 
 .app-shell {
@@ -36,14 +54,15 @@ body {
 }
 
 .welcome-panel {
-  background: linear-gradient(135deg, #ff9a9e, #fad0c4 25%, #fbc2eb 50%, #a1c4fd 75%, #c2e9fb);
-  color: #111;
+  background: transparent;
+  color: transparent;
 }
 
 .welcome-content,
 .selection-panel {
   width: min(760px, 100%);
   text-align: center;
+  color: white;
 }
 
 .welcome-content h1,
@@ -51,6 +70,7 @@ body {
   margin: 0;
   font-size: clamp(2rem, 4vw, 3.5rem);
   letter-spacing: 0.02em;
+  color: white;
 }
 
 .welcome-actions,
@@ -114,21 +134,24 @@ button:active {
   pointer-events: auto;
 }
 
+/* 🔄 MODIFICAR DENTRO DE .dice-dialog: */
 .dice-dialog {
+  /* ... mantienes tus propiedades de tamaño fijo ... */
   width: min(420px, calc(100% - 40px));
-  /* --- CAMBIOS PARA EL TAMAÑO FIJO Y CONTROLADO --- */
-  height: 280px;             /* Forzamos un alto fijo ideal para todos los estados */
+  height: 280px;             
   display: flex;
-  flex-direction: column;    /* Coloca los elementos uno debajo de otro */
-  justify-content: center;   /* Centra verticalmente el contenido dentro de las dimensiones fijas */
-  align-items: center;       /* Asegura el centrado horizontal */
-  /* ------------------------------------------------- */
+  flex-direction: column;    
+  justify-content: center;   
+  align-items: center;       
   padding: 28px;
   border-radius: 28px;
-  background: rgba(16, 22, 38, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  
+  /* CAMBIO AQUÍ 👇 */
+  background: rgba(16, 22, 38, 0.82); /* Bajamos a 0.82 para que se intuya levemente el patrón diagonal */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   text-align: center;
+  color: var(--text);
 }
 
 .dice-overlay.hidden {
@@ -151,14 +174,16 @@ button:active {
   margin-top: 16px;
 }
 
+/* 🔄 MODIFICAR ESTA REGLA: */
 .hero-panel,
 .board-panel {
-  background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(24, 27, 43, 0.65); /* Un fondo oscuro translúcido que permite ver el patrón */
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
   padding: 24px;
   margin-bottom: 24px;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);        /* Mayor desenfoque para dar un efecto premium de cristalizado */
+  -webkit-backdrop-filter: blur(16px);
 }
 
 h1 {
@@ -182,6 +207,7 @@ p {
   display: block;
   font-size: 0.95rem;
   margin-bottom: 6px;
+  font-weight: bold;
 }
 
 input[type='file'] {
@@ -202,6 +228,7 @@ button {
   background: linear-gradient(135deg, #4f5fff, #29b5ff);
   color: white;
   transition: transform 0.22s ease, opacity 0.22s ease;
+  font-weight: bold;
 }
 
 button:hover {

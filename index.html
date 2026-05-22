@@ -32,10 +32,10 @@
       </div>
 
       <div class="dice-duration-setting" style="margin-top: 24px; text-align: center; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto;">
-        <label for="diceDurationSlider" style="display: block; font-weight: 600; margin-bottom: 12px;">
+        <label for="diceDurationSlider" style="display: block; font-weight: bold; margin-bottom: 12px;">
           Tiempo de tirada de dado: <span id="diceDurationValue">3</span>s
         </label>
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;font-weight: bold;">
           <span>1</span>
           <input 
             type="range" 
@@ -50,8 +50,8 @@
         </div>
       </div>
       <div class="selection-actions">
-        <button id="backButton" type="button" class="secondary">Volver</button>
-        <button id="startButton" type="button" class="primary">Iniciar partida</button>
+        <button id="backButton" type="button" class="secondary">VOLVER</button>
+        <button id="startButton" type="button" class="primary">INICIAR PARTIDA</button>
       </div>
       <div id="selectionStatus" class="status-panel hidden"></div>
     </section>
@@ -64,7 +64,7 @@
       <div class="dice-overlay hidden" id="diceOverlay">
         <div class="dice-dialog">
           <div class="dice-controls">
-            <button id="rollDiceButton" type="button">Lanzar dado</button>
+            <button id="rollDiceButton" type="button">LANZAR DADO</button>
             <div id="diceFace" class="dice-face hidden" aria-label="Cara del dado"></div>
           </div>
           <div id="diceResult" class="dice-result hidden"></div>
