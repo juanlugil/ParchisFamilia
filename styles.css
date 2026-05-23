@@ -284,6 +284,9 @@ button {
   color: white;
   transition: transform 0.22s ease, opacity 0.22s ease;
   font-weight: bold;
+  /* ─── NUEVO BORDE MÁS MARCADO ─── */
+  border: 2px solid rgba(255, 255, 255, 0.4) !important; /* Borde de 2px semi-transparente que resalta sobre fondos oscuros */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Sutil sombra para dar volumen al borde */
 }
 
 button:hover {
@@ -658,4 +661,65 @@ button:disabled {
 
 #diceDurationSlider::-webkit-slider-thumb:hover {
   transform: scale(1.2);
+}
+
+
+/* Estilos para el botón Salir del juego */
+#exitGameButton {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+#exitGameButton:hover {
+  background-color: #b91c1c !important; /* Un rojo un poco más oscuro al pasar el cursor */
+  transform: scale(1.03);
+}
+
+#exitGameButton:active {
+  transform: scale(0.98);
+}
+
+/* Ocupa el 100% del contenedor acortado wrapper */
+.slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  width: 100%; 
+  /* Ajuste crucial para que las líneas coincidan con el centro del botón del slider en los extremos */
+  padding: 0 6px; 
+  box-sizing: border-box;
+  margin-top: 6px;
+}
+
+/* Estilo de cada rayita vertical */
+.slider-ticks option {
+  width: 2px;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.6); /* Color blanco visible */
+  padding: 0;
+}
+/* ─── SISTEMA DE MARCAS CASERAS COMPATIBLE CON CUALQUIER NAVEGADOR ─── */
+
+.slider-wrapper {
+  position: relative;
+  width: 60%;
+}
+
+/* Contenedor de las líneas */
+.slider-marks {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  /* Compensa el ancho del "círculo/tirador" del input en los extremos */
+  padding: 0 6px; 
+  box-sizing: border-box;
+  margin-top: 6px;
+}
+
+/* Cada rayita vertical */
+.slider-marks .mark {
+  display: inline-block;
+  width: 2px;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.6); /* Color blanco semi-transparente visible */
+  border-radius: 1px;
 }

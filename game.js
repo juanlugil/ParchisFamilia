@@ -7,6 +7,7 @@ const safeTrackIndices = new Set([5, 12, 17, 22, 29, 34, 39, 46, 51, 56, 63, 68]
 // Elementos del DOM para la configuración de la velocidad del dado
 const diceDurationSlider = document.getElementById('diceDurationSlider');
 const diceDurationValue = document.getElementById('diceDurationValue');
+const exitGameButton = document.getElementById('exitGameButton');
 
 /**
  * Determina si una casilla de la pista común es segura.
@@ -84,6 +85,7 @@ let pendingMoveCallback = null;
 let currentRoll = null;
 let rollDuration = 3000; // Duración por defecto de la animación del dado en ms
 let contatiradas = 0;    // 🟢 NUEVA: Contador de tiradas para el primer jugador
+let pasarTurnoTimeout = null;
 
 // --- VARIABLES PARA EL DEBUG DE TIRADAS (Cargadas desde archivo externo) ---
 let debugDiceSequence = []; // Lista de números predefinidos
@@ -100,7 +102,7 @@ const startButton = document.getElementById('startButton');
 const welcomePanel = document.getElementById('welcomePanel');
 const selectionPanel = document.getElementById('selectionPanel');
 const continueButton = document.getElementById('continueButton');
-const closeButton = document.getElementById('closeButton');
+//const closeButton = document.getElementById('closeButton');
 const backButton = document.getElementById('backButton');
 const selectionStatus = document.getElementById('selectionStatus');
 const diceOverlay = document.getElementById('diceOverlay');
@@ -588,7 +590,7 @@ function renderBoardPieces() {
       
       // 🟢 CONTROL DE SEGURIDAD INTERNO: Si la coordenada no existe, saltamos la ficha para que no rompa el juego
       if (!coords) {
-        console.warn(`⚠️ Posición inválida para la ficha ${piece.id} del jugador ${player.name}. Saltando renderizado.`);
+        //console.warn(`⚠️ Posición inválida para la ficha ${piece.id} del jugador ${player.name}. Saltando renderizado.`);
         return; 
       }
 
@@ -787,10 +789,11 @@ function startCountdown(seconds, initialMessage) {
 
 /**
  * Cierra la ventana del navegador (si está autorizado por las directivas de la pestaña).
- */
+ 
 function closeApp() {
   window.close();
 }
+*/
 
 function openSelectionScreen() {
   showScreen('selection');
@@ -1213,7 +1216,7 @@ function applyMove(option) {
   // 🟢 NUEVO: Si la ficha ha llegado a la casilla final de meta, activamos el bonus de +10
   if (destination.status === 'finished') {
     player.pendingFinishBonus = true;
-    console.log(`🎉 ¡Ficha en meta! Se activa el bonus de +10 pasos para el jugador ${player.name}`);
+    //console.log(`🎉 ¡Ficha en meta! Se activa el bonus de +10 pasos para el jugador ${player.name}`);
   }
   
   const captured = destination.status === 'track' && option.capture && captureAtTarget(destination, player);
@@ -1249,7 +1252,7 @@ function finishTurn() {
   currentRoll = null;
   
   showDiceOverlay(); 
-  renderDiceDialog(`Turno de ${next.name}`, [], true);
+  renderDiceDialog(`TURNO PARA ${next.name}`, [], true);
   
   rollDiceButton.disabled = false;
   statusPanel.textContent = '';
@@ -1341,7 +1344,7 @@ if (current.pendingFinishBonus) {
     }
     
     // 🟢 SI NO HAY MOVIMIENTOS VÁLIDOS (porque las fichas se pasan de largo de la meta o están bloqueadas):
-    console.log(`⚠️ ${current.name} tiene un bonus de +10, pero ninguna ficha puede moverlo sin pasarse. Se pierde el bonus.`);
+    //console.log(`⚠️ ${current.name} tiene un bonus de +10, pero ninguna ficha puede moverlo sin pasarse. Se pierde el bonus.`);
     current.pendingFinishBonus = false; // Limpiamos el bonus de forma segura para evitar bucles
     
     renderDiceDialog(`${current.name} ha llegado a la meta, pero no tiene ninguna ficha que pueda avanzar 10 casillas sin pasarse.`, [
@@ -1361,7 +1364,7 @@ if (current.pendingFinishBonus) {
   if (currentRoll === 6 && current.consecutiveSixes < 3) {
     rollDiceButton.disabled = false;
     renderDiceFace(currentRoll);
-    renderDiceDialog(`Turno de ${current.name}. Puedes tirar otra vez con 6.`, [], true);
+    renderDiceDialog(`TURNO DE ${current.name}<br>TIRA OTRA VEZ`, [], true);
     return;
   }
 
@@ -1463,10 +1466,16 @@ function rollDice() {
     return;
   }
 
+  // ⏱️ NUEVO: Si había un temporizador de pasar turno activo, lo limpiamos inmediatamente
+  if (pasarTurnoTimeout) {
+    clearTimeout(pasarTurnoTimeout);
+    pasarTurnoTimeout = null;
+  }
+
   // 🟢 SI ES EL PRIMER JUGADOR, INCREMENTAMOS EL CONTADOR
   if (currentPlayerIndex === 0) {
     contatiradas++;
-    console.log(`🎲 [CONTADOR] El primer jugador inicia su tirada. Ronda/Tirada número: ${contatiradas}`);
+    //console.log(`🎲 [CONTADOR] El primer jugador inicia su tirada. Ronda/Tirada número: ${contatiradas}`);
   }
 
   rollDiceButton.disabled = true;
@@ -1491,17 +1500,17 @@ function rollDice() {
       
       if (debugDiceSequence && debugDiceSequence.length > 0) {
         finalFace = debugDiceSequence[debugDiceIndex];
-        console.log(`[DEBUG] Leyendo índice [${debugDiceIndex}] de tiradas.txt: ${finalFace}`);
+        //console.log(`[DEBUG] Leyendo índice [${debugDiceIndex}] de tiradas.txt: ${finalFace}`);
         debugDiceIndex = (debugDiceIndex + 1) % debugDiceSequence.length;
       } else {
         finalFace = Math.floor(Math.random() * 6) + 1;
-        console.log(`[JUEGO] Dado aleatorio: ${finalFace}`);
+        //console.log(`[JUEGO] Dado aleatorio: ${finalFace}`);
       }
 
       finalFace = parseInt(finalFace, 10);
       if (isNaN(finalFace) || finalFace < 1 || finalFace > 6) {
         finalFace = 1;
-        console.error("[ERROR] El número extraído no es del 1 al 6. Forzando a 1.");
+        //console.error("[ERROR] El número extraído no es del 1 al 6. Forzando a 1.");
       }
       
       currentRoll = finalFace;
@@ -1555,7 +1564,7 @@ function processDiceResult(face) {
           (option) => {
             chooseReturnHome(option.piece);
           }, 
-          'Has sacado tres 6s. Elige una ficha para devolverla a casa:'
+          'DEMASIADA SUERTE<br>ELIGE UNA FICHA PARA DEVOLVERLA A CASA'
         );
       } else {
         // Copia de seguridad por si el jugador no tuviera fichas fuera de casa
@@ -1567,32 +1576,56 @@ function processDiceResult(face) {
     
     return;
   }
-
+// --- REEMPLAZA DESDE AQUÍ HASTA EL FINAL DE TU FUNCIÓN processDiceResult ---
   const moves = getAvailableMoves(current, face);
   if (moves.length === 0) {
     if (face === 6) {
-      renderDiceDialog(`${current.name} no tiene movimientos posibles, pero puede tirar otra vez.`, [], true);
+      renderDiceDialog(`${current.name} NO PUEDES MOVER FICHA<br>¡TIRA OTRA VEZ!`, [], true);
       rollDiceButton.disabled = false;
       return;
     }
+
+    // Definimos la acción común para limpiar el timeout y avanzar el turno de forma segura
+    const ejecutarPasoTurnoAuto = () => {
+      if (pasarTurnoTimeout) {
+        clearTimeout(pasarTurnoTimeout);
+        pasarTurnoTimeout = null;
+      }
+      hideDiceOverlay();
+      finishTurn();
+    };
+
     if (face === 5 && current.pieces.some((piece) => piece.status === 'home')) {
-      renderDiceDialog(`${current.name} no puede sacar ficha de casa; la casilla inicial está bloqueada.`, [
-        { label: 'Pasar Turno', onClick: () => { hideDiceOverlay(); finishTurn(); } }
+      // 🚀 CORRECCIÓN: Vinculamos el click manual a ejecutarPasoTurnoAuto para limpiar el timeout
+      renderDiceDialog(`${current.name} NO PUEDES SACAR FICHA DE CASA; LA CASILLA INICIAL ESTÁ BLOQUEADA.`, [
+        { label: 'PASAR TURNO', onClick: ejecutarPasoTurnoAuto }
       ], false);
       showDiceOverlay();
+
+      // ⏱️ Inicia cuenta atrás oculta de 5 segundos
+      pasarTurnoTimeout = setTimeout(() => {
+        ejecutarPasoTurnoAuto();
+      }, 5000);
       return;
     }
-    renderDiceDialog(`${current.name} no tiene movimientos posibles`, [
-      { label: 'Pasar Turno', onClick: () => { hideDiceOverlay(); finishTurn(); } }
+
+    // 🚀 CORRECCIÓN: Vinculamos el click manual a ejecutarPasoTurnoAuto para limpiar el timeout
+    renderDiceDialog(`${current.name} NO TIENES MOVIMIENTOS POSIBLES`, [
+      { label: 'PASAR TURNO', onClick: ejecutarPasoTurnoAuto }
     ], false);
     showDiceOverlay();
+
+    // ⏱️ Inicia cuenta atrás oculta de 5 segundos
+    pasarTurnoTimeout = setTimeout(() => {
+      ejecutarPasoTurnoAuto();
+    }, 5000);
     return;
   }
 
   setPendingMoveOptions(
-    moves, 
-    performMove, 
-    `Turno de ${current.name}. Selecciona una de tus fichas parpadeantes en el tablero para moverla con el número ${face}:`
+    moves,
+    performMove,
+    `TURNO PARA ${current.name}. Selecciona una de tus fichas parpadeantes en el tablero para moverla con el número ${face}:`
   );
 }
 
@@ -1605,7 +1638,7 @@ async function loadDebugTiradas() {
     if (!response.ok) throw new Error(`Estado HTTP: ${response.status}`);
     
     const text = await response.text();
-    console.log("📄 Contenido crudo leído de tiradas.txt:", text);
+    //console.log("📄 Contenido crudo leído de tiradas.txt:", text);
 
     debugDiceSequence = text.split(',')
                             .map(num => num.trim())
@@ -1614,12 +1647,12 @@ async function loadDebugTiradas() {
                             .filter(num => !isNaN(num) && num >= 1 && num <= 6);
     
     if (debugDiceSequence.length === 0) {
-      console.warn("⚠️ El archivo tiradas.txt se leyó, pero no se encontraron números válidos del 1 al 6.");
+      //console.warn("⚠️ El archivo tiradas.txt se leyó, pero no se encontraron números válidos del 1 al 6.");
     } else {
-      console.log('🎲 SECUENCIA DEBUG CARGADA CON ÉXITO:', debugDiceSequence);
+      //console.log('🎲 SECUENCIA DEBUG CARGADA CON ÉXITO:', debugDiceSequence);
     }
   } catch (error) {
-    console.warn('⚠️ No se ha encontrado el archivo tiradas.txt o no ha sido posible leerlo. Se utilizará el modo de dado aleatorio estándar.', error);
+    //console.warn('⚠️ No se ha encontrado el archivo tiradas.txt o no ha sido posible leerlo. Se utilizará el modo de dado aleatorio estándar.', error);
   }
 }
 
@@ -1628,10 +1661,99 @@ loadDebugTiradas();
 
 // --- VINCULACIÓN DE EVENTOS EN LA INTERFAZ ---
 continueButton.addEventListener('click', openSelectionScreen);
-closeButton.addEventListener('click', closeApp);
+//closeButton.addEventListener('click', closeApp);
 backButton.addEventListener('click', returnToWelcomeScreen);
 startButton.addEventListener('click', startGame);
 rollDiceButton.addEventListener('click', rollDice);
 
+
+// --- LÓGICA DEL FORMULARIO DE FEEDBACK (API GOOGLE APPSSCRIPTS) ---
+const feedbackButton = document.getElementById('feedbackButton');
+const feedbackModal = document.getElementById('feedbackModal');
+const feedbackForm = document.getElementById('feedbackForm');
+const feedbackSender = document.getElementById('feedbackSender'); // Referencia al nuevo campo
+const feedbackMessage = document.getElementById('feedbackMessage');
+const closeFeedbackButton = document.getElementById('closeFeedbackButton');
+const submitFeedbackButton = document.getElementById('submitFeedbackButton');
+const feedbackStatus = document.getElementById('feedbackStatus');
+const appScriptURL = 'https://script.google.com/macros/s/AKfycbwXfcwQ-KLCNxSVCBcN3TuSpkj1dW7MxBgsSjS8qtcKiIxI5ED_UDeR8qHFgJAg_qo/exec';
+
+// Abre el modal de feedback
+feedbackButton.addEventListener('click', () => {
+  feedbackModal.classList.remove('hidden');
+  feedbackSender.value = ''; // Limpia el remitente
+  feedbackMessage.value = ''; // Limpia el mensaje
+  feedbackStatus.classList.add('hidden');
+  feedbackForm.classList.remove('hidden');
+});
+
+// Cierra el modal de feedback al pulsar "Cancelar"
+closeFeedbackButton.addEventListener('click', () => {
+  feedbackModal.classList.add('hidden');
+});
+
+// Captura el envío del formulario y procesa el fetch
+feedbackForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  submitFeedbackButton.disabled = true;
+  feedbackStatus.textContent = 'Enviando tus comentarios...';
+  feedbackStatus.style.color = 'var(--muted)';
+  feedbackStatus.classList.remove('hidden');
+
+  // Construye el payload incluyendo el campo del Remitente (o un valor por defecto si está vacío)
+  const payload = {
+    fecha: new Date().toLocaleString(),
+    sender: feedbackSender.value.trim() || 'Anónimo',
+    comment: feedbackMessage.value
+  };
+
+  try {
+    // Al usar Web Apps de Google Apps Script es obligatorio 'mode: no-cors' para saltar restricciones de origen
+    await fetch(appScriptURL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    // Petición enviada (en modo no-cors la respuesta es opaca, asumimos éxito al no saltar al catch)
+    feedbackForm.classList.add('hidden');
+    feedbackStatus.textContent = '¡Gracias! Tus comentarios se han enviado correctamente.';
+    feedbackStatus.style.color = '#4ade80'; // Color verde brillante adaptado a tu estilo
+
+    // Espera 2.5 segundos mostrando el éxito y cierra el modal automáticamente
+    setTimeout(() => {
+      feedbackModal.classList.add('hidden');
+    }, 2500);
+
+  } catch (error) {
+    console.error('Error enviando el formulario:', error);
+    feedbackStatus.textContent = 'Hubo un problema al enviar. Inténtalo de nuevo.';
+    feedbackStatus.style.color = '#ff4d4d'; // Color rojo brillante adaptado a tu estilo
+  } finally {
+    submitFeedbackButton.disabled = false;
+  }
+});
+
+// Al pulsar el botón SALIR, vuelve a la pantalla de bienvenida
+if (exitGameButton) {
+  exitGameButton.addEventListener('click', () => {
+    // 1. Ocultamos el panel del tablero
+    const boardPanel = document.getElementById('boardPanel');
+    if (boardPanel) boardPanel.classList.add('hidden');
+
+    // 2. Mostramos el panel de bienvenida
+    const welcomePanel = document.getElementById('welcomePanel');
+    if (welcomePanel) welcomePanel.classList.remove('hidden');
+    
+    // 3. Opcional: Si tienes una función para reiniciar el juego, la llamamos aquí
+    if (typeof resetFullGame === 'function') {
+      resetFullGame();
+    }
+  });
+}
 setupInputHandlers();
 showScreen('welcome');

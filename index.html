@@ -15,7 +15,7 @@
           <h1>Vamos a echar una partida al PARCHÍS</h1>
         </div>
         <div class="welcome-actions">
-          <button id="closeButton" type="button" class="secondary">CERRAR</button>
+          <button id="feedbackButton" type="button" class="secondary">FEEDBACK</button>
           <button id="continueButton" type="button" class="primary">CONTINUAR</button>
         </div>
       </div>
@@ -36,24 +36,42 @@
         <input id="imageBlue" type="file" accept="image/*" />
       
       </div>
-      <div class="dice-duration-setting" style="margin-top: 24px; text-align: center; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto;">
-        <label for="diceDurationSlider" style="display: block; font-weight: bold; margin-bottom: 12px;">
-          Tiempo de tirada de dado: <span id="diceDurationValue">3</span>s
-        </label>
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;font-weight: bold;">
-          <span>1</span>
-          <input 
-            type="range" 
-            id="diceDurationSlider" 
-            min="1" 
-            max="5" 
-            step="1" 
-            value="3" 
-            style="flex-grow: 1; cursor: pointer;"
-          >
-          <span>5</span>
-          </div>
-        </div>
+<!-- Reemplaza el bloque "dice-duration-setting" por este: -->
+<div class="dice-duration-setting" style="margin-top: 24px; text-align: center; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto;">
+  <label for="diceDurationSlider" style="display: block; font-weight: bold; margin-bottom: 12px;">
+    Tiempo de tirada de dado: <span id="diceDurationValue">3</span>s
+  </label>
+  
+  <div style="display: flex; align-items: center; justify-content: center; gap: 15px; font-weight: bold;">
+    <span>1</span>
+    
+    <!-- Contenedor común acortado para sincronía total -->
+    <div class="slider-wrapper" style="width: 60%; position: relative; display: flex; flex-direction: column; align-items: center;">
+      
+      <input 
+        type="range" 
+        id="diceDurationSlider" 
+        min="1" 
+        max="5" 
+        step="1" 
+        value="3" 
+        style="width: 100%; cursor: pointer; margin: 0; z-index: 2;" 
+      >
+      
+      <!-- ─── MARCAS MANUALES EN LUGAR DE DATALIST ─── -->
+      <div class="slider-marks">
+        <span class="mark"></span>
+        <span class="mark"></span>
+        <span class="mark"></span>
+        <span class="mark"></span>
+        <span class="mark"></span>
+      </div>
+      
+    </div>
+    
+    <span>5</span>
+  </div>
+</div>
       </div>
     </div>
       <div class="selection-actions">
@@ -68,6 +86,11 @@
         <div id="statusPanel" class="status-panel"></div>
         <div class="board-stage" id="boardStage" aria-label="Tablero de parchís"></div>
       </div>
+      <div class="game-actions-footer" style="text-align: center; margin-top: 20px; width: 100%; padding-bottom: 20px;">
+        <button type="button" id="exitGameButton" style="background-color: #dc2626; color: #ffffff; padding: 12px 28px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; text-transform: uppercase; font-size: 0.95rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: background-color 0.2s, transform 0.2s;">
+          Salir
+        </button>
+      </div>
       <div class="dice-overlay hidden" id="diceOverlay">
         <div class="dice-dialog">
           <div class="dice-controls">
@@ -79,6 +102,33 @@
         </div>
       </div>
     </section>
+    <!-- 🟢 MODAL NUEVO PARA EL FORMULARIO DE FEEDBACK (ACTUALIZADO CON REMITENTE) -->
+    <div id="feedbackModal" class="dice-overlay hidden">
+      <div class="dice-dialog" style="height: auto; min-height: 380px; gap: 16px;">
+        <h3 style="margin: 0; color: white;">Enviar Sugerencias o Errores</h3>
+        <form id="feedbackForm" style="width: 100%; display: flex; flex-direction: column; gap: 14px;">
+          
+          <!-- Nuevo campo Remitente -->
+          <div style="display: flex; flex-direction: column; gap: 6px; text-align: left; width: 100%;">
+            <label for="feedbackSender" style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; font-weight: bold;">Remitente:</label>
+            <input id="feedbackSender" type="text" placeholder="Tu nombre" maxlength="30" style="width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white; font-family: inherit; font-size: 0.95rem;" />
+          </div>
+
+          <!-- Campo de Comentarios existente -->
+          <div style="display: flex; flex-direction: column; gap: 6px; text-align: left; width: 100%;">
+            <label for="feedbackMessage" style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; font-weight: bold;">Comentarios:</label>
+            <textarea id="feedbackMessage" placeholder="Escribe tus comentarios aquí..." maxlength="300" required rows="4" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white; resize: none; font-family: inherit; font-size: 0.95rem;"></textarea>
+          </div>
+
+          <div style="display: flex; gap: 10px; width: 100%; margin-top: 6px;">
+            <button id="closeFeedbackButton" type="button" class="secondary" style="flex: 1; padding: 10px;">CANCELAR</button>
+            <button id="submitFeedbackButton" type="submit" class="primary" style="flex: 1; padding: 10px;">ENVIAR</button>
+          </div>
+        </form>
+        <div id="feedbackStatus" class="hidden" style="font-weight: bold; margin-top: 10px; font-size: 0.95rem;"></div>
+      </div>
+    </div>
+
   </main>
 
   <script src="game.js"></script>
