@@ -723,3 +723,9 @@ button:disabled {
   background-color: rgba(255, 255, 255, 0.6); /* Color blanco semi-transparente visible */
   border-radius: 1px;
 }
+/* Estilos dinámicos para el botón de silenciado */
+#toggleSoundButton.muted-active {
+  background: linear-gradient(135deg, #7f1d1d, #dc2626);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+}

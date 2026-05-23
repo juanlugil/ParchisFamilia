@@ -86,6 +86,9 @@ let currentRoll = null;
 let rollDuration = 3000; // Duración por defecto de la animación del dado en ms
 let contatiradas = 0;    // 🟢 NUEVA: Contador de tiradas para el primer jugador
 let pasarTurnoTimeout = null;
+let isSoundEnabled = true; // 🔊 Control global de reproducción de sonido
+const diceSound = new Audio('sound_dado.mp3');
+const tokenSound = new Audio('sound_ficha.mp3');
 
 // --- VARIABLES PARA EL DEBUG DE TIRADAS (Cargadas desde archivo externo) ---
 let debugDiceSequence = []; // Lista de números predefinidos
@@ -107,6 +110,9 @@ const backButton = document.getElementById('backButton');
 const selectionStatus = document.getElementById('selectionStatus');
 const diceOverlay = document.getElementById('diceOverlay');
 const diceOptionGroup = document.getElementById('diceOptionGroup');
+const toggleSoundButton = document.getElementById('toggleSoundButton');
+const soundIcon = document.getElementById('soundIcon');
+const soundStatusText = document.getElementById('soundStatusText');
 let currentScreen = 'welcome';
 
 /**
@@ -631,7 +637,16 @@ function renderBoardPieces() {
       if (selectableOption) {
         token.classList.add('clickable');
         token.title = 'Haz clic para mover esta ficha';
-        token.addEventListener('click', () => selectPiece(piece));
+// 🔊 Modificado: Ahora ejecuta el sonido y luego la lógica del juego
+       token.addEventListener('click', () => {
+        if (isSoundEnabled) {
+          tokenSound.currentTime = 0; // Reinicia el audio por si se hace clic muy rápido
+          tokenSound.play().catch(error => {
+            console.warn("El navegador bloqueó el sonido de la ficha:", error);
+          });
+        }
+        selectPiece(piece);
+        });
       }
 
       if (player.image) {
@@ -1465,6 +1480,13 @@ function rollDice() {
   if (currentScreen !== 'game' || rollDiceButton.disabled) {
     return;
   }
+// 🔊 NUEVO: Lógica de reproducción de sonido
+  if (isSoundEnabled) {
+    diceSound.currentTime = 0; // Reinicia el audio por si se pulsa muy rápido
+    diceSound.play().catch(error => {
+      console.warn("El navegador bloqueó la reproducción automática o el archivo no existe:", error);
+    });
+  }
 
   // ⏱️ NUEVO: Si había un temporizador de pasar turno activo, lo limpiamos inmediatamente
   if (pasarTurnoTimeout) {
@@ -1753,6 +1775,27 @@ if (exitGameButton) {
     if (typeof resetFullGame === 'function') {
       resetFullGame();
     }
+  });
+}
+
+// Gestión del Mute ON/OFF de los sonidos
+if (toggleSoundButton) {
+  toggleSoundButton.addEventListener('click', () => {
+    isSoundEnabled = !isSoundEnabled; // Conmuta el estado lógico
+    
+    if (isSoundEnabled) {
+      soundIcon.textContent = '🔊';
+      soundStatusText.textContent = 'Sonido Activo';
+      toggleSoundButton.classList.remove('muted-active');
+      toggleSoundButton.classList.add('secondary');
+    } else {
+      soundIcon.textContent = '🔇';
+      soundStatusText.textContent = 'Silenciado';
+      toggleSoundButton.classList.remove('secondary');
+      toggleSoundButton.classList.add('muted-active');
+    }
+    
+    // Opcional: console.log(`Estado del sonido: ${isSoundEnabled ? 'ENCENDIDO' : 'APAGADO'}`);
   });
 }
 setupInputHandlers();
