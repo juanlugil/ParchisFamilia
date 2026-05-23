@@ -26,6 +26,7 @@ const players = [
     inputId: 'imageRed',
     homeId: 'homeRed',
     image: null,
+    isCPU: false,
     startIndex: 39,       // Casilla de salida al tablero común
     entranceIndex: 34,     // Última casilla antes de desviarse al carril de meta rojo
     pieces: [],
@@ -39,6 +40,7 @@ const players = [
     inputId: 'imageGreen',
     homeId: 'homeGreen',
     image: null,
+    isCPU: false,
     startIndex: 56,       // Casilla de salida al tablero común
     entranceIndex: 51,     // Última casilla antes de desviarse al carril de meta verde
     pieces: [],
@@ -52,6 +54,7 @@ const players = [
     inputId: 'imageYellow',
     homeId: 'homeYellow',
     image: null,
+    isCPU: false,
     startIndex: 5,        // Casilla de salida al tablero común
     entranceIndex: 68,     // Última casilla antes de desviarse al carril de meta amarillo
     pieces: [],
@@ -65,6 +68,7 @@ const players = [
     inputId: 'imageBlue',
     homeId: 'homeBlue',
     image: null,
+    isCPU: false,
     startIndex: 22,       // Casilla de salida al tablero común
     entranceIndex: 17,     // Última casilla antes de desviarse al carril de meta azul
     pieces: [],
@@ -1849,5 +1853,38 @@ if (toggleSoundButton) {
     // Opcional: console.log(`Estado del sonido: ${isSoundEnabled ? 'ENCENDIDO' : 'APAGADO'}`);
   });
 }
+
+/**
+ * 🤖 NUEVO: Vincula los listeners de los switches de CPU en la pantalla de selección
+ */
+function setupCpuHandlers() {
+  players.forEach((player) => {
+    // Buscamos el checkbox (ej: cpuToggle-red)
+    const checkbox = document.getElementById(`cpuToggle-${player.color}`);
+    // Buscamos el input de archivo correspondiente (ej: imageRed)
+    const fileInput = document.getElementById(player.inputId);
+
+    if (checkbox && fileInput) {
+      checkbox.addEventListener('change', (event) => {
+        const isChecked = event.target.checked;
+        
+        // 1. Actualiza la variable en la lógica del juego
+        player.isCPU = isChecked;
+        
+        // 2. Oculta o muestra el selector de archivos añadiendo/quitando la clase
+        if (isChecked) {
+          fileInput.classList.add('hidden-cpu-input');
+        } else {
+          fileInput.classList.remove('hidden-cpu-input');
+        }
+        
+        // console.log(`Jugador ${player.name} cambiado a CPU: ${player.isCPU}`);
+      });
+    }
+  });
+}
+
+// Asegúrate de inicializarlo al final del archivo ejecutándolo junto a la otra función:
+setupCpuHandlers();
 setupInputHandlers();
 showScreen('welcome');

@@ -25,17 +25,52 @@
       <div class="selection-marquee">
       <h2>ESCOGE UNA IMAGEN PARA CADA JUGADOR</h2>
       
-      <div class="inputs-grid">
-        <label class="file-label" for="imageRed">Jugador<div class="text-color-red">ROJO</div></label>
-        <input id="imageRed" type="file" accept="image/*" />
-        <label class="file-label" for="imageGreen">Jugador<div class="text-color-green">VERDE</div></label>
-        <input id="imageGreen" type="file" accept="image/*" />
-        <label class="file-label" for="imageYellow">Jugador<div class="text-color-yellow">AMARILLO</div></label>
-        <input id="imageYellow" type="file" accept="image/*" />
-        <label class="file-label" for="imageBlue">Jugador<div class="text-color-blue">AZUL</div></label>
-        <input id="imageBlue" type="file" accept="image/*" />
-      
+      <div class="inputs-column">
+        <div class="player-input-row">
+          <div class="player-label-zone">
+            <span class="file-label">Jugador <span class="text-color-red">ROJO</span></span>
+            <label class="switch">
+              <input type="checkbox" id="cpuToggle-red">
+              <span class="slider-switch"><span class="cpu-inside-text">CPU</span></span>
+            </label>
+          </div>
+          <input id="imageRed" type="file" accept="image/*" />
+        </div>
+
+        <div class="player-input-row">
+          <div class="player-label-zone">
+            <span class="file-label">Jugador <span class="text-color-green">VERDE</span></span>
+            <label class="switch">
+              <input type="checkbox" id="cpuToggle-green">
+              <span class="slider-switch"><span class="cpu-inside-text">CPU</span></span>
+            </label>
+          </div>
+          <input id="imageGreen" type="file" accept="image/*" />
+        </div>
+
+        <div class="player-input-row">
+          <div class="player-label-zone">
+            <span class="file-label">Jugador <span class="text-color-yellow">AMARILLO</span></span>
+            <label class="switch">
+              <input type="checkbox" id="cpuToggle-yellow">
+              <span class="slider-switch"><span class="cpu-inside-text">CPU</span></span>
+            </label>
+          </div>
+          <input id="imageYellow" type="file" accept="image/*" />
+        </div>
+
+        <div class="player-input-row">
+          <div class="player-label-zone">
+            <span class="file-label">Jugador <span class="text-color-blue">AZUL</span></span>
+            <label class="switch">
+              <input type="checkbox" id="cpuToggle-blue">
+              <span class="slider-switch"><span class="cpu-inside-text">CPU</span></span>
+            </label>
+          </div>
+          <input id="imageBlue" type="file" accept="image/*" />
+        </div>
       </div>
+
 <!-- Reemplaza el bloque "dice-duration-setting" por este: -->
 <div class="dice-duration-setting" style="margin-top: 24px; text-align: center; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto;">
   <label for="diceDurationSlider" style="display: block; font-weight: bold; margin-bottom: 12px;">
