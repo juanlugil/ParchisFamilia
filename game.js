@@ -89,6 +89,7 @@ let pasarTurnoTimeout = null;
 let isSoundEnabled = true; // 🔊 Control global de reproducción de sonido
 const diceSound = new Audio('sound_dado.mp3');
 const tokenSound = new Audio('sound_ficha.mp3');
+const buttonSound = new Audio('sound_button.mp3');
 
 // --- VARIABLES PARA EL DEBUG DE TIRADAS (Cargadas desde archivo externo) ---
 let debugDiceSequence = []; // Lista de números predefinidos
@@ -113,6 +114,7 @@ const diceOptionGroup = document.getElementById('diceOptionGroup');
 const toggleSoundButton = document.getElementById('toggleSoundButton');
 const soundIcon = document.getElementById('soundIcon');
 const soundStatusText = document.getElementById('soundStatusText');
+const soundButton = document.getElementById('soundButton');
 let currentScreen = 'welcome';
 
 /**
@@ -811,10 +813,23 @@ function closeApp() {
 */
 
 function openSelectionScreen() {
+
+  if (isSoundEnabled) {
+    buttonSound.currentTime = 0; // Reinicia el audio por si se pulsa muy rápido
+    buttonSound.play().catch(error => {
+      console.warn("El navegador bloqueó la reproducción automática o el archivo no existe:", error);
+    });
+  }
   showScreen('selection');
 }
 
 function returnToWelcomeScreen() {
+  if (isSoundEnabled) {
+    buttonSound.currentTime = 0; // Reinicia el audio por si se pulsa muy rápido
+    buttonSound.play().catch(error => {
+      console.warn("El navegador bloqueó la reproducción automática o el archivo no existe:", error);
+    });
+  }
   showScreen('welcome');
 }
 
@@ -822,6 +837,12 @@ function returnToWelcomeScreen() {
  * Configura los datos básicos e inicializa la partida de juego.
  */
 function startGame() {
+  if (isSoundEnabled) {
+    buttonSound.currentTime = 0; // Reinicia el audio por si se pulsa muy rápido
+    buttonSound.play().catch(error => {
+      console.warn("El navegador bloqueó la reproducción automática o el archivo no existe:", error);
+    });
+  }
   if (currentScreen !== 'selection') {
     return;
   }
@@ -1081,6 +1102,12 @@ function endGame(winner) {
       {
         label: 'Nueva partida',
         onClick: () => {
+          if (isSoundEnabled) {
+    buttonSound.currentTime = 0; // Reinicia el audio por si se pulsa muy rápido
+    buttonSound.play().catch(error => {
+      console.warn("El navegador bloqueó la reproducción automática o el archivo no existe:", error);
+    });
+  }
           resetFullGame(); // Ejecuta el reinicio completo
         }
       }
@@ -1251,6 +1278,12 @@ function applyMove(option) {
  * Concluye el turno del jugador activo y avanza de forma cíclica al siguiente.
  */
 function finishTurn() {
+  if (isSoundEnabled) {
+    buttonSound.currentTime = 0; // Reinicia el audio por si se pulsa muy rápido
+    buttonSound.play().catch(error => {
+      console.warn("El navegador bloqueó la reproducción automática o el archivo no existe:", error);
+    });
+  }
   const winner = getGameWinner();
   if (winner) {
     endGame(winner);
@@ -1494,13 +1527,7 @@ function rollDice() {
     pasarTurnoTimeout = null;
   }
 
-  // 🟢 SI ES EL PRIMER JUGADOR, INCREMENTAMOS EL CONTADOR
-  if (currentPlayerIndex === 0) {
-    contatiradas++;
-    //console.log(`🎲 [CONTADOR] El primer jugador inicia su tirada. Ronda/Tirada número: ${contatiradas}`);
-  }
-
-  rollDiceButton.disabled = true;
+   rollDiceButton.disabled = true;
   renderDiceFace(null);
 
   
@@ -1702,6 +1729,13 @@ const appScriptURL = 'https://script.google.com/macros/s/AKfycbwXfcwQ-KLCNxSVCBc
 
 // Abre el modal de feedback
 feedbackButton.addEventListener('click', () => {
+
+  if (isSoundEnabled) {
+    buttonSound.play().catch(error => {
+      console.warn("El navegador bloqueó la reproducción automática o el archivo no existe:", error);
+    });
+  }
+
   feedbackModal.classList.remove('hidden');
   feedbackSender.value = ''; // Limpia el remitente
   feedbackMessage.value = ''; // Limpia el mensaje
@@ -1711,13 +1745,24 @@ feedbackButton.addEventListener('click', () => {
 
 // Cierra el modal de feedback al pulsar "Cancelar"
 closeFeedbackButton.addEventListener('click', () => {
+  if (isSoundEnabled) {
+    buttonSound.currentTime = 0; // Reinicia el audio por si se pulsa muy rápido
+    buttonSound.play().catch(error => {
+      console.warn("El navegador bloqueó la reproducción automática o el archivo no existe:", error);
+    });
+  }
   feedbackModal.classList.add('hidden');
 });
 
 // Captura el envío del formulario y procesa el fetch
 feedbackForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  
+  if (isSoundEnabled) {
+    buttonSound.currentTime = 0; // Reinicia el audio por si se pulsa muy rápido
+    buttonSound.play().catch(error => {
+      console.warn("El navegador bloqueó la reproducción automática o el archivo no existe:", error);
+    });
+  }
   submitFeedbackButton.disabled = true;
   feedbackStatus.textContent = 'Enviando tus comentarios...';
   feedbackStatus.style.color = 'var(--muted)';
@@ -1763,6 +1808,12 @@ feedbackForm.addEventListener('submit', async (e) => {
 // Al pulsar el botón SALIR, vuelve a la pantalla de bienvenida
 if (exitGameButton) {
   exitGameButton.addEventListener('click', () => {
+    if (isSoundEnabled) {
+    buttonSound.currentTime = 0; // Reinicia el audio por si se pulsa muy rápido
+    buttonSound.play().catch(error => {
+      console.warn("El navegador bloqueó la reproducción automática o el archivo no existe:", error);
+    });
+  }
     // 1. Ocultamos el panel del tablero
     const boardPanel = document.getElementById('boardPanel');
     if (boardPanel) boardPanel.classList.add('hidden');
