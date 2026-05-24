@@ -1884,6 +1884,50 @@ function setupCpuHandlers() {
   });
 }
 
+// --- LÓGICA AVANZADA DE CPU (AUTO-CLICKER) ---
+// Se ejecuta un bucle cada 1.2 segundos para comprobar si es el turno de un jugador CPU
+// y pulsar automáticamente las opciones que estén activas en la interfaz.
+setInterval(() => {
+  // 1. Solo actuamos si el juego ha empezado y estamos en el tablero principal
+  if (currentScreen !== 'game') return;
+
+  const current = players[currentPlayerIndex];
+  
+  // 2. Si el jugador actual es humano (isCPU = false), salimos sin hacer nada
+  if (!current || !current.isCPU) return;
+
+  // 3. ACCIÓN: Lanzar el dado
+  // Comprobamos que el panel del dado es visible, que el botón existe, es visible y no está bloqueado
+  if (!diceOverlay.classList.contains('hidden') && 
+      !rollDiceButton.classList.contains('hidden') && 
+      !rollDiceButton.disabled) {
+    rollDiceButton.click();
+    return; // Terminamos la ejecución en este ciclo para dar tiempo a la animación
+  }
+
+  // 4. ACCIÓN: Botones de diálogo (ej. "PASAR TURNO", "Elegir Ficha +20", etc.)
+  if (!diceOverlay.classList.contains('hidden')) {
+    const actionButtons = document.querySelectorAll('#diceOptionGroup .action-button');
+    if (actionButtons.length > 0) {
+      // La CPU siempre pulsa la primera opción disponible por defecto
+      actionButtons[0].click();
+      return;
+    }
+  }
+
+  // 5. ACCIÓN: Mover fichas en el tablero
+  // Buscamos si hay fichas de este jugador parpadeando (esperando a ser clicadas)
+  const clickableTokens = document.querySelectorAll('.piece-token.clickable');
+  if (clickableTokens.length > 0) {
+    // Escogemos una ficha aleatoria de las disponibles para que la CPU sea un poco impredecible
+    const randomIndex = Math.floor(Math.random() * clickableTokens.length);
+    clickableTokens[randomIndex].click();
+    return;
+  }
+
+}, 1200); // Se repite la evaluación cada 1.2s
+
+
 // Asegúrate de inicializarlo al final del archivo ejecutándolo junto a la otra función:
 setupCpuHandlers();
 setupInputHandlers();
